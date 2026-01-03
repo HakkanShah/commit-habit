@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String?        @unique
+  name          String?
+  avatarUrl     String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  installations Installation[]
+  accounts      Account[]
+}
+
+model Account {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String    // "github" or "google"
+  providerAccountId String    // GitHub userId or Google sub
+  providerUsername  String?   // GitHub login or Google email
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Installation {
+  id              String        @id @default(cuid())
+  installationId  Int           @unique
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repoFullName    String        // "owner/repo"
+  repoId          Int
+  active          Boolean       @default(true)
+  commitsToday    Int           @default(0)
+  lastRunAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  activityLogs    ActivityLog[]
+
+  @@index([userId])
+  @@index([active])
+}
+
+model ActivityLog {
+  id             String       @id @default(cuid())
+  installationId String
+  installation   Installation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  action         String       // "commit_created", "skipped_has_commits", "error"
+  message        String?
+  createdAt      DateTime     @default(now())
+
+  @@index([installationId])
+  @@index([createdAt])
+}
