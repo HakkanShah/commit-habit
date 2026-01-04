@@ -37,7 +37,7 @@ model Account {
 
 model Installation {
   id              String        @id @default(cuid())
-  installationId  Int           @unique
+  installationId  Int
   userId          String
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   repoFullName    String        // "owner/repo"
@@ -49,6 +49,7 @@ model Installation {
   updatedAt       DateTime      @updatedAt
   activityLogs    ActivityLog[]
 
+  @@unique([installationId, repoId])
   @@index([userId])
   @@index([active])
 }
