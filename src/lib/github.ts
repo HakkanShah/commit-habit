@@ -88,7 +88,6 @@ export async function exchangeCodeForUser(code: string): Promise<{
     })
 
     const tokenData = await tokenResponse.json()
-    console.log('GitHub token response:', JSON.stringify(tokenData, null, 2))
 
     if (tokenData.error) {
         throw new Error(`GitHub OAuth error: ${tokenData.error_description || tokenData.error}`)
