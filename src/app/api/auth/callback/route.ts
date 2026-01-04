@@ -92,6 +92,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${appUrl}/dashboard`)
     } catch (error) {
         console.error('Auth callback error:', error)
+        if (error instanceof Error) {
+            console.error('Error message:', error.message)
+            console.error('Error stack:', error.stack)
+        }
         return NextResponse.redirect(`${appUrl}?error=auth_failed`)
     }
 }
