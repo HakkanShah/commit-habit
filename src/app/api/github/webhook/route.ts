@@ -110,10 +110,14 @@ async function handleInstallationEvent(data: {
         if (repositories) {
             for (const repo of repositories) {
                 await prisma.installation.upsert({
-                    where: { installationId: installation.id },
+                    where: {
+                        installationId_repoId: {
+                            installationId: installation.id,
+                            repoId: repo.id,
+                        },
+                    },
                     update: {
                         repoFullName: repo.full_name,
-                        repoId: repo.id,
                         active: true,
                     },
                     create: {
@@ -170,10 +174,14 @@ async function handleInstallationRepositoriesEvent(data: {
         // Add new repositories
         for (const repo of repositories_added) {
             await prisma.installation.upsert({
-                where: { installationId: installation.id },
+                where: {
+                    installationId_repoId: {
+                        installationId: installation.id,
+                        repoId: repo.id,
+                    },
+                },
                 update: {
                     repoFullName: repo.full_name,
-                    repoId: repo.id,
                     active: true,
                 },
                 create: {

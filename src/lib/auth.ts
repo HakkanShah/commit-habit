@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import jwt from 'jsonwebtoken'
 
-const SESSION_SECRET = process.env.CRON_SECRET || 'default-secret-change-me'
+const SESSION_SECRET = process.env.SESSION_SECRET || process.env.CRON_SECRET || 'default-secret-change-me'
 const SESSION_COOKIE_NAME = 'commit-habit-session'
 
 export interface SessionPayload {
