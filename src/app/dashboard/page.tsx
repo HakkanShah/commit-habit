@@ -2,7 +2,7 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Github, ExternalLink, LogOut, AlertCircle } from 'lucide-react'
+import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus } from 'lucide-react'
 import { InstallationCard } from './installation-card'
 import { formatDate } from '@/lib/utils'
 
@@ -43,10 +43,12 @@ export default async function DashboardPage() {
     return (
         <div className="min-h-screen bg-[var(--background)]">
             {/* Header */}
-            <header className="border-b border-[var(--border)] bg-[var(--card)]">
+            <header className="border-b border-[var(--border)] bg-[var(--card)]/80 backdrop-blur-md sticky top-0 z-50">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-                        <span className="text-2xl">📊</span>
+                        <div className="w-8 h-8 rounded-lg bg-[var(--accent-green)] flex items-center justify-center">
+                            <GitCommit size={16} className="text-white" />
+                        </div>
                         <span className="gradient-text">Commit Habit</span>
                     </Link>
 
@@ -56,17 +58,17 @@ export default async function DashboardPage() {
                                 <img
                                     src={user.avatarUrl}
                                     alt={displayName}
-                                    className="w-8 h-8 rounded-full"
+                                    className="w-8 h-8 rounded-full ring-2 ring-[var(--border)]"
                                 />
                             )}
-                            <span className="font-medium">{displayName}</span>
+                            <span className="font-medium hidden sm:inline">{displayName}</span>
                         </div>
                         <a
                             href="/api/auth/logout"
                             className="btn btn-ghost text-sm text-[var(--muted)]"
                         >
                             <LogOut size={16} />
-                            Logout
+                            <span className="hidden sm:inline">Logout</span>
                         </a>
                     </div>
                 </div>
@@ -74,7 +76,7 @@ export default async function DashboardPage() {
 
             <main className="container mx-auto px-4 py-8">
                 {/* Page Title */}
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div>
                         <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
                         <p className="text-[var(--muted)]">
@@ -82,7 +84,7 @@ export default async function DashboardPage() {
                         </p>
                     </div>
                     <a href={githubAppUrl} className="btn btn-primary">
-                        <Github size={18} />
+                        <Plus size={18} />
                         Add Repository
                     </a>
                 </div>
