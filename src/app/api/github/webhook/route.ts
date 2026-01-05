@@ -1,214 +1,429 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
+import {
+    WebhookError,
+    DatabaseError,
+    ValidationError,
+    logError,
+    createErrorResponse,
+} from '@/lib/errors'
+
+// ============================================================================
+// Configuration
+// ============================================================================
 
 const WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET
+const REQUEST_TIMEOUT_MS = 25000 // 25 seconds
+
+if (!WEBHOOK_SECRET) {
+    console.warn('[WEBHOOK] GITHUB_WEBHOOK_SECRET is not configured - webhooks will fail')
+}
+
+// ============================================================================
+// Types
+// ============================================================================
+
+interface GitHubSender {
+    id: number
+    login: string
+    avatar_url?: string
+}
+
+interface GitHubInstallation {
+    id: number
+    account?: { id: number; login: string; avatar_url?: string }
+}
+
+interface GitHubRepository {
+    id: number
+    full_name: string
+}
+
+interface InstallationEventPayload {
+    action: 'created' | 'deleted' | 'suspend' | 'unsuspend'
+    installation: GitHubInstallation
+    repositories?: GitHubRepository[]
+    sender: GitHubSender
+}
+
+interface InstallationRepositoriesEventPayload {
+    action: 'added' | 'removed'
+    installation: { id: number }
+    repositories_added?: GitHubRepository[]
+    repositories_removed?: GitHubRepository[]
+    sender: GitHubSender
+}
+
+// ============================================================================
+// Security Functions
+// ============================================================================
 
 /**
- * Verify GitHub webhook signature
+ * Verify GitHub webhook signature using timing-safe comparison
  */
 function verifyWebhookSignature(payload: string, signature: string | null): boolean {
-    if (!WEBHOOK_SECRET || !signature) return false
+    if (!WEBHOOK_SECRET) {
+        logError(new WebhookError(
+            'WEBHOOK_001',
+            'GITHUB_WEBHOOK_SECRET is not configured'
+        ))
+        return false
+    }
 
-    const expectedSignature = 'sha256=' + crypto
-        .createHmac('sha256', WEBHOOK_SECRET)
-        .update(payload)
-        .digest('hex')
+    if (!signature) {
+        logError(new WebhookError(
+            'WEBHOOK_001',
+            'Missing x-hub-signature-256 header'
+        ))
+        return false
+    }
 
-    return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature)
-    )
+    if (!signature.startsWith('sha256=')) {
+        logError(new WebhookError(
+            'WEBHOOK_001',
+            'Invalid signature format - must start with sha256='
+        ))
+        return false
+    }
+
+    try {
+        const expectedSignature = 'sha256=' + crypto
+            .createHmac('sha256', WEBHOOK_SECRET)
+            .update(payload)
+            .digest('hex')
+
+        // Use timing-safe comparison to prevent timing attacks
+        const signatureBuffer = Buffer.from(signature)
+        const expectedBuffer = Buffer.from(expectedSignature)
+
+        // Buffers must be same length for timingSafeEqual
+        if (signatureBuffer.length !== expectedBuffer.length) {
+            return false
+        }
+
+        return crypto.timingSafeEqual(signatureBuffer, expectedBuffer)
+    } catch (error) {
+        logError(error, { action: 'verify webhook signature' })
+        return false
+    }
 }
+
+/**
+ * Validate webhook event type
+ */
+function validateEventType(event: string | null): event is 'installation' | 'installation_repositories' | 'ping' {
+    const supportedEvents = ['installation', 'installation_repositories', 'ping']
+    return event !== null && supportedEvents.includes(event)
+}
+
+// ============================================================================
+// Database Operations
+// ============================================================================
 
 /**
  * Find or create user based on GitHub account
  */
-async function findOrCreateGitHubUser(sender: { id: number; login: string; avatar_url?: string }) {
-    // Check if account exists
-    const existingAccount = await prisma.account.findUnique({
-        where: {
-            provider_providerAccountId: {
-                provider: 'github',
-                providerAccountId: String(sender.id),
-            },
-        },
-        include: { user: true },
-    })
-
-    if (existingAccount) {
-        return existingAccount.user
+async function findOrCreateGitHubUser(sender: GitHubSender) {
+    // Validate sender data
+    if (!sender.id || typeof sender.id !== 'number') {
+        throw ValidationError.invalidValue('sender.id', sender.id, 'must be a valid number')
+    }
+    if (!sender.login || typeof sender.login !== 'string') {
+        throw ValidationError.invalidValue('sender.login', sender.login, 'must be a valid string')
     }
 
-    // Create new user with GitHub account
-    const user = await prisma.user.create({
-        data: {
-            name: sender.login,
-            avatarUrl: sender.avatar_url || '',
-            accounts: {
-                create: {
+    try {
+        // Check if account exists
+        const existingAccount = await prisma.account.findUnique({
+            where: {
+                provider_providerAccountId: {
                     provider: 'github',
                     providerAccountId: String(sender.id),
-                    providerUsername: sender.login,
                 },
             },
-        },
-    })
+            include: { user: true },
+        })
 
-    return user
-}
-
-export async function POST(request: NextRequest) {
-    try {
-        const payload = await request.text()
-        const signature = request.headers.get('x-hub-signature-256')
-        const event = request.headers.get('x-github-event')
-
-        // Verify webhook signature
-        if (!verifyWebhookSignature(payload, signature)) {
-            console.error('Invalid webhook signature')
-            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+        if (existingAccount) {
+            return existingAccount.user
         }
 
-        const data = JSON.parse(payload)
+        // Create new user with GitHub account
+        const user = await prisma.user.create({
+            data: {
+                name: sender.login,
+                avatarUrl: sender.avatar_url || '',
+                accounts: {
+                    create: {
+                        provider: 'github',
+                        providerAccountId: String(sender.id),
+                        providerUsername: sender.login,
+                    },
+                },
+            },
+        })
 
-        // Handle different webhook events
-        switch (event) {
-            case 'installation':
-                await handleInstallationEvent(data)
-                break
-            case 'installation_repositories':
-                await handleInstallationRepositoriesEvent(data)
-                break
-            default:
-                console.log(`Unhandled webhook event: ${event}`)
-        }
-
-        return NextResponse.json({ success: true })
+        console.log(`[WEBHOOK] Created new user ${user.id} for GitHub user ${sender.login}`)
+        return user
     } catch (error) {
-        console.error('Webhook error:', error)
-        return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+        logError(error, { action: 'find or create user', senderId: sender.id })
+        throw DatabaseError.queryError('find or create user', { senderId: sender.id }, error instanceof Error ? error : undefined)
     }
 }
 
-async function handleInstallationEvent(data: {
-    action: string
-    installation: {
-        id: number
-        account: { id: number; login: string; avatar_url: string }
+/**
+ * Create or update installation record
+ */
+async function upsertInstallation(
+    installationId: number,
+    userId: string,
+    repo: GitHubRepository
+): Promise<void> {
+    try {
+        await prisma.installation.upsert({
+            where: {
+                installationId_repoId: {
+                    installationId,
+                    repoId: repo.id,
+                },
+            },
+            update: {
+                repoFullName: repo.full_name,
+                active: true,
+            },
+            create: {
+                installationId,
+                userId,
+                repoFullName: repo.full_name,
+                repoId: repo.id,
+                active: true,
+            },
+        })
+    } catch (error) {
+        logError(error, {
+            action: 'upsert installation',
+            installationId,
+            repoId: repo.id,
+            repoFullName: repo.full_name,
+        })
+        throw DatabaseError.queryError('upsert installation', { installationId, repoId: repo.id }, error instanceof Error ? error : undefined)
     }
-    repositories?: Array<{ id: number; full_name: string }>
-    sender: { id: number; login: string; avatar_url: string }
-}) {
+}
+
+// ============================================================================
+// Event Handlers
+// ============================================================================
+
+async function handleInstallationEvent(data: InstallationEventPayload): Promise<void> {
     const { action, installation, repositories, sender } = data
 
-    if (action === 'created') {
-        // Find or create user
-        const user = await findOrCreateGitHubUser(sender)
+    console.log(`[WEBHOOK] Installation event: ${action} by ${sender.login}`)
 
-        // Create installation records for each repository
-        if (repositories) {
-            for (const repo of repositories) {
-                await prisma.installation.upsert({
-                    where: {
-                        installationId_repoId: {
-                            installationId: installation.id,
-                            repoId: repo.id,
-                        },
-                    },
-                    update: {
-                        repoFullName: repo.full_name,
-                        active: true,
-                    },
-                    create: {
-                        installationId: installation.id,
-                        userId: user.id,
-                        repoFullName: repo.full_name,
-                        repoId: repo.id,
-                        active: true,
-                    },
-                })
+    switch (action) {
+        case 'created': {
+            const user = await findOrCreateGitHubUser(sender)
+
+            if (repositories && repositories.length > 0) {
+                for (const repo of repositories) {
+                    await upsertInstallation(installation.id, user.id, repo)
+                }
+                console.log(`[WEBHOOK] Created ${repositories.length} installation(s) for user ${user.id}`)
+            } else {
+                console.log('[WEBHOOK] Installation created with no repositories')
             }
+            break
         }
 
-        console.log(`Installation created: ${installation.id} by ${sender.login}`)
-    } else if (action === 'deleted') {
-        // Remove all installations for this installation ID
-        await prisma.installation.deleteMany({
-            where: { installationId: installation.id },
-        })
+        case 'deleted': {
+            try {
+                // Delete all activity logs first
+                await prisma.activityLog.deleteMany({
+                    where: {
+                        installation: {
+                            installationId: installation.id,
+                        },
+                    },
+                })
 
-        console.log(`Installation deleted: ${installation.id}`)
-    } else if (action === 'suspend') {
-        // Suspend all installations
-        await prisma.installation.updateMany({
-            where: { installationId: installation.id },
-            data: { active: false },
-        })
+                // Delete all installations
+                const result = await prisma.installation.deleteMany({
+                    where: { installationId: installation.id },
+                })
 
-        console.log(`Installation suspended: ${installation.id}`)
-    } else if (action === 'unsuspend') {
-        // Reactivate installations
-        await prisma.installation.updateMany({
-            where: { installationId: installation.id },
-            data: { active: true },
-        })
+                console.log(`[WEBHOOK] Deleted ${result.count} installation(s) for installation ID ${installation.id}`)
+            } catch (error) {
+                logError(error, { action: 'delete installations', installationId: installation.id })
+                throw DatabaseError.queryError('delete installations', { installationId: installation.id }, error instanceof Error ? error : undefined)
+            }
+            break
+        }
 
-        console.log(`Installation unsuspended: ${installation.id}`)
+        case 'suspend': {
+            try {
+                const result = await prisma.installation.updateMany({
+                    where: { installationId: installation.id },
+                    data: { active: false },
+                })
+
+                console.log(`[WEBHOOK] Suspended ${result.count} installation(s)`)
+            } catch (error) {
+                logError(error, { action: 'suspend installations', installationId: installation.id })
+                throw DatabaseError.queryError('suspend installations', {}, error instanceof Error ? error : undefined)
+            }
+            break
+        }
+
+        case 'unsuspend': {
+            try {
+                const result = await prisma.installation.updateMany({
+                    where: { installationId: installation.id },
+                    data: { active: true },
+                })
+
+                console.log(`[WEBHOOK] Unsuspended ${result.count} installation(s)`)
+            } catch (error) {
+                logError(error, { action: 'unsuspend installations', installationId: installation.id })
+                throw DatabaseError.queryError('unsuspend installations', {}, error instanceof Error ? error : undefined)
+            }
+            break
+        }
+
+        default:
+            console.log(`[WEBHOOK] Unhandled installation action: ${action}`)
     }
 }
 
-async function handleInstallationRepositoriesEvent(data: {
-    action: string
-    installation: { id: number }
-    repositories_added?: Array<{ id: number; full_name: string }>
-    repositories_removed?: Array<{ id: number; full_name: string }>
-    sender: { id: number; login: string; avatar_url?: string }
-}) {
+async function handleInstallationRepositoriesEvent(data: InstallationRepositoriesEventPayload): Promise<void> {
     const { action, installation, repositories_added, repositories_removed, sender } = data
 
-    if (action === 'added' && repositories_added) {
-        // Find or create user
+    console.log(`[WEBHOOK] Installation repositories event: ${action} by ${sender.login}`)
+
+    if (action === 'added' && repositories_added && repositories_added.length > 0) {
         const user = await findOrCreateGitHubUser(sender)
 
-        // Add new repositories
         for (const repo of repositories_added) {
-            await prisma.installation.upsert({
-                where: {
-                    installationId_repoId: {
+            await upsertInstallation(installation.id, user.id, repo)
+        }
+
+        console.log(`[WEBHOOK] Added ${repositories_added.length} repository(ies): ${repositories_added.map(r => r.full_name).join(', ')}`)
+    }
+
+    if (action === 'removed' && repositories_removed && repositories_removed.length > 0) {
+        try {
+            // Deactivate instead of delete to preserve history
+            for (const repo of repositories_removed) {
+                await prisma.installation.updateMany({
+                    where: {
                         installationId: installation.id,
                         repoId: repo.id,
                     },
-                },
-                update: {
-                    repoFullName: repo.full_name,
-                    active: true,
-                },
-                create: {
-                    installationId: installation.id,
-                    userId: user.id,
-                    repoFullName: repo.full_name,
-                    repoId: repo.id,
-                    active: true,
-                },
-            })
-        }
+                    data: { active: false },
+                })
+            }
 
-        console.log(`Repositories added: ${repositories_added.map(r => r.full_name).join(', ')}`)
+            console.log(`[WEBHOOK] Removed ${repositories_removed.length} repository(ies): ${repositories_removed.map(r => r.full_name).join(', ')}`)
+        } catch (error) {
+            logError(error, {
+                action: 'remove repositories',
+                installationId: installation.id,
+                repos: repositories_removed.map(r => r.full_name),
+            })
+            throw DatabaseError.queryError('remove repositories', {}, error instanceof Error ? error : undefined)
+        }
     }
+}
 
-    if (action === 'removed' && repositories_removed) {
-        // We don't delete, just deactivate (user might want to see history)
-        for (const repo of repositories_removed) {
-            await prisma.installation.updateMany({
-                where: {
-                    installationId: installation.id,
-                    repoId: repo.id,
-                },
-                data: { active: false },
+// ============================================================================
+// Main Route Handler
+// ============================================================================
+
+export async function POST(request: NextRequest) {
+    const startTime = Date.now()
+
+    try {
+        // Get headers
+        const signature = request.headers.get('x-hub-signature-256')
+        const event = request.headers.get('x-github-event')
+        const deliveryId = request.headers.get('x-github-delivery')
+
+        console.log(`[WEBHOOK] Received ${event} event (delivery: ${deliveryId})`)
+
+        // Validate event type
+        if (!validateEventType(event)) {
+            console.log(`[WEBHOOK] Ignoring unsupported event type: ${event}`)
+            return NextResponse.json({
+                success: true,
+                message: `Event type '${event}' is not handled`,
             })
         }
 
-        console.log(`Repositories removed: ${repositories_removed.map(r => r.full_name).join(', ')}`)
+        // Handle ping event (no payload verification needed)
+        if (event === 'ping') {
+            console.log('[WEBHOOK] Received ping event')
+            return NextResponse.json({
+                success: true,
+                message: 'pong',
+            })
+        }
+
+        // Get payload
+        let payload: string
+        try {
+            payload = await request.text()
+        } catch (error) {
+            logError(error, { action: 'read webhook payload' })
+            return NextResponse.json(
+                { error: 'Failed to read request body', code: 'WEBHOOK_002' },
+                { status: 400 }
+            )
+        }
+
+        // Verify signature
+        if (!verifyWebhookSignature(payload, signature)) {
+            console.warn(`[WEBHOOK] Invalid signature for delivery ${deliveryId}`)
+            return NextResponse.json(
+                { error: 'Invalid signature', code: 'WEBHOOK_001' },
+                { status: 401 }
+            )
+        }
+
+        // Parse payload
+        let data: Record<string, unknown>
+        try {
+            data = JSON.parse(payload)
+        } catch (error) {
+            logError(error, { action: 'parse webhook payload' })
+            return NextResponse.json(
+                { error: 'Invalid JSON payload', code: 'WEBHOOK_002' },
+                { status: 400 }
+            )
+        }
+
+        // Handle events
+        switch (event) {
+            case 'installation':
+                await handleInstallationEvent(data as unknown as InstallationEventPayload)
+                break
+
+            case 'installation_repositories':
+                await handleInstallationRepositoriesEvent(data as unknown as InstallationRepositoriesEventPayload)
+                break
+        }
+
+        const duration = Date.now() - startTime
+        console.log(`[WEBHOOK] Processed ${event} in ${duration}ms`)
+
+        return NextResponse.json({
+            success: true,
+            event,
+            deliveryId,
+            durationMs: duration,
+        })
+
+    } catch (error) {
+        logError(error, { action: 'process webhook', durationMs: Date.now() - startTime })
+        const { body, status } = createErrorResponse(error)
+        return NextResponse.json(body, { status })
     }
 }
