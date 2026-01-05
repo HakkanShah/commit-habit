@@ -1,8 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { ExternalLink, Pause, Play, Clock, CheckCircle, XCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { ExternalLink, Pause, Play, Clock, CheckCircle, XCircle, AlertCircle, Loader2, RotateCcw, RefreshCw } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { useToast } from '@/components/toast'
+import { apiFetch } from '@/lib/api-client'
+
+// ============================================================================
+// Types
+// ============================================================================
 
 interface ActivityLog {
     id: string
@@ -24,37 +30,100 @@ interface Installation {
 
 interface InstallationCardProps {
     installation: Installation
+    onUpdate?: () => void
 }
 
-export function InstallationCard({ installation }: InstallationCardProps) {
+interface UpdateResponse {
+    success: boolean
+    installation?: Installation
+    message?: string
+}
+
+// ============================================================================
+// Action Label & Icon Helpers
+// ============================================================================
+
+const ACTION_CONFIG: Record<string, { icon: 'success' | 'muted' | 'warning' | 'danger' | 'primary' | 'default'; label: string }> = {
+    commit_created: { icon: 'success', label: 'Commit created' },
+    skipped_has_commits: { icon: 'muted', label: 'Skipped (has real commits)' },
+    skipped_daily_limit: { icon: 'warning', label: 'Skipped (daily limit)' },
+    skipped_no_readme: { icon: 'warning', label: 'Skipped (no README)' },
+    error: { icon: 'danger', label: 'Error' },
+    error_permission: { icon: 'danger', label: 'Permission error' },
+    error_not_found: { icon: 'danger', label: 'Repository not found' },
+    error_rate_limited: { icon: 'warning', label: 'Rate limited' },
+    error_conflict: { icon: 'warning', label: 'Conflict' },
+    error_network: { icon: 'danger', label: 'Network error' },
+    error_unknown: { icon: 'danger', label: 'Error' },
+    paused: { icon: 'warning', label: 'Paused' },
+    resumed: { icon: 'primary', label: 'Resumed' },
+}
+
+function getActionConfig(action: string): { icon: string; label: string } {
+    return ACTION_CONFIG[action] || { icon: 'default', label: action }
+}
+
+// ============================================================================
+// Component
+// ============================================================================
+
+export function InstallationCard({ installation, onUpdate }: InstallationCardProps) {
     const [isActive, setIsActive] = useState(installation.active)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const { success, error: showError } = useToast()
 
-    const toggleActive = async () => {
+    const toggleActive = async (retryCount = 0) => {
         setIsLoading(true)
         setError(null)
 
-        try {
-            const response = await fetch('/api/installations', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    installationId: installation.id,
-                    active: !isActive,
-                }),
-            })
+        const result = await apiFetch<UpdateResponse>('/api/installations', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                installationId: installation.id,
+                active: !isActive,
+            }),
+        })
 
-            if (!response.ok) {
-                throw new Error('Failed to update')
+        setIsLoading(false)
+
+        if (result.error) {
+            const { message, isRetryable, isAuthError, suggestedAction } = result.error
+
+            // Handle auth errors - redirect to login
+            if (isAuthError) {
+                showError('Session expired', 'Please log in again')
+                setTimeout(() => {
+                    window.location.href = '/api/auth/github'
+                }, 2000)
+                return
             }
 
-            setIsActive(!isActive)
-        } catch {
-            setError('Failed to update. Please try again.')
-        } finally {
-            setIsLoading(false)
+            // Show error with retry option if retryable
+            if (isRetryable && retryCount < 2) {
+                showError(
+                    message,
+                    suggestedAction,
+                    {
+                        label: 'Retry',
+                        onClick: () => toggleActive(retryCount + 1),
+                    }
+                )
+            } else {
+                setError(message)
+                showError(message, suggestedAction)
+            }
+            return
         }
+
+        // Success
+        setIsActive(!isActive)
+        success(
+            isActive ? 'Automation paused' : 'Automation resumed',
+            `${installation.repoFullName} has been ${isActive ? 'paused' : 'resumed'}`
+        )
+        onUpdate?.()
     }
 
     const getStatusBadge = () => {
@@ -75,47 +144,35 @@ export function InstallationCard({ installation }: InstallationCardProps) {
     }
 
     const getActionIcon = (action: string) => {
-        switch (action) {
-            case 'commit_created':
-                return <CheckCircle size={14} className="text-[var(--accent)]" />
-            case 'skipped_has_commits':
-                return <CheckCircle size={14} className="text-[var(--muted)]" />
-            case 'skipped_daily_limit':
-                return <AlertCircle size={14} className="text-[var(--warning)]" />
-            case 'error':
-                return <XCircle size={14} className="text-[var(--danger)]" />
-            case 'paused':
-                return <Pause size={14} className="text-[var(--warning)]" />
-            case 'resumed':
-                return <Play size={14} className="text-[var(--accent)]" />
+        const config = getActionConfig(action)
+        const iconProps = { size: 14 }
+
+        switch (config.icon) {
+            case 'success':
+                return <CheckCircle {...iconProps} className="text-[var(--accent)]" />
+            case 'muted':
+                return <CheckCircle {...iconProps} className="text-[var(--muted)]" />
+            case 'warning':
+                return <AlertCircle {...iconProps} className="text-[var(--warning)]" />
+            case 'danger':
+                return <XCircle {...iconProps} className="text-[var(--danger)]" />
+            case 'primary':
+                return <Play {...iconProps} className="text-[var(--primary)]" />
             default:
-                return <Clock size={14} className="text-[var(--muted)]" />
+                return <Clock {...iconProps} className="text-[var(--muted)]" />
         }
     }
 
     const getActionLabel = (action: string) => {
-        switch (action) {
-            case 'commit_created':
-                return 'Commit created'
-            case 'skipped_has_commits':
-                return 'Skipped (has real commits)'
-            case 'skipped_daily_limit':
-                return 'Skipped (daily limit)'
-            case 'skipped_no_readme':
-                return 'Skipped (no README)'
-            case 'error':
-                return 'Error'
-            case 'paused':
-                return 'Paused'
-            case 'resumed':
-                return 'Resumed'
-            default:
-                return action
-        }
+        return getActionConfig(action).label
     }
 
+    const hasRecentError = installation.activityLogs.some(
+        log => log.action.startsWith('error_') || log.action === 'error'
+    )
+
     return (
-        <div className="card">
+        <div className={`card ${hasRecentError ? 'border-[var(--danger)]/30' : ''}`}>
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-[var(--secondary)] flex items-center justify-center">
@@ -142,9 +199,10 @@ export function InstallationCard({ installation }: InstallationCardProps) {
                 <div className="flex items-center gap-3">
                     {getStatusBadge()}
                     <button
-                        onClick={toggleActive}
+                        onClick={() => toggleActive()}
                         disabled={isLoading}
                         className={`btn ${isActive ? 'btn-secondary' : 'btn-primary'} text-sm py-2`}
+                        aria-label={isActive ? 'Pause automation' : 'Resume automation'}
                     >
                         {isLoading ? (
                             <Loader2 size={16} className="animate-spin" />
@@ -163,10 +221,21 @@ export function InstallationCard({ installation }: InstallationCardProps) {
                 </div>
             </div>
 
+            {/* Inline Error with Retry */}
             {error && (
-                <div className="text-sm text-[var(--danger)] mb-4 flex items-center gap-1">
-                    <XCircle size={14} />
-                    {error}
+                <div className="alert alert-error mb-4">
+                    <XCircle size={16} className="flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="text-sm font-medium">{error}</p>
+                    </div>
+                    <button
+                        onClick={() => toggleActive()}
+                        className="flex items-center gap-1 text-sm hover:underline"
+                        disabled={isLoading}
+                    >
+                        <RotateCcw size={14} />
+                        Retry
+                    </button>
                 </div>
             )}
 
@@ -174,7 +243,9 @@ export function InstallationCard({ installation }: InstallationCardProps) {
             <div className="flex gap-6 mb-4 text-sm">
                 <div>
                     <span className="text-[var(--muted)]">Commits Today:</span>{' '}
-                    <span className="font-medium">{installation.commitsToday}/5</span>
+                    <span className={`font-medium ${installation.commitsToday >= 5 ? 'text-[var(--warning)]' : ''}`}>
+                        {installation.commitsToday}/5
+                    </span>
                 </div>
                 <div>
                     <span className="text-[var(--muted)]">Last Run:</span>{' '}
@@ -190,11 +261,11 @@ export function InstallationCard({ installation }: InstallationCardProps) {
                         {installation.activityLogs.slice(0, 3).map((log) => (
                             <div key={log.id} className="flex items-center gap-2 text-sm">
                                 {getActionIcon(log.action)}
-                                <span className="text-[var(--muted)]">
+                                <span className="text-[var(--muted)] truncate flex-1">
                                     {getActionLabel(log.action)}
                                     {log.message && ` - ${log.message}`}
                                 </span>
-                                <span className="text-xs text-[var(--muted)] ml-auto">
+                                <span className="text-xs text-[var(--muted)] flex-shrink-0">
                                     {formatDate(log.createdAt)}
                                 </span>
                             </div>

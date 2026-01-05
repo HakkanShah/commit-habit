@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { Github, Shield, Zap, Clock, CheckCircle, XCircle, ArrowRight, Heart } from 'lucide-react'
+import { ErrorBanner } from '@/components/error-banner'
 
 export default function HomePage() {
   const githubAppUrl = `https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_NAME || 'commit-habit'}/installations/new`
 
   return (
     <div className="min-h-screen">
+      {/* Error Banner for OAuth Errors */}
+      <ErrorBanner />
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
