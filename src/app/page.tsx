@@ -1,195 +1,166 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Github, Terminal, Shield, Command, Zap, ArrowRight, ChevronDown } from 'lucide-react'
+import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink } from 'lucide-react'
 import { HeroSequence } from '@/components/hero-sequence'
 import { TerminalWindow, TerminalLine } from '@/components/terminal-window'
 import { ErrorBanner } from '@/components/error-banner'
 
-const fadeInUp = {
-  initial: { opacity: 0, y: 30 },
+const fadeIn = {
+  initial: { opacity: 0, y: 20 },
   whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: '-100px' },
-  transition: { duration: 0.6 }
-}
-
-const staggerContainer = {
-  initial: {},
-  whileInView: { transition: { staggerChildren: 0.15 } },
-  viewport: { once: true }
+  viewport: { once: true, margin: '-50px' },
+  transition: { duration: 0.5 }
 }
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#0d1117] selection:bg-[#39d353] selection:text-black font-sans text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#0d1117] text-white overflow-x-hidden">
       <ErrorBanner />
 
-      {/* HERO SECTION */}
+      {/* Hero */}
       <HeroSequence />
 
-      {/* FEATURES SECTION */}
-      <section className="relative py-32 bg-gradient-to-b from-[#0d1117] to-[#050505]">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <motion.div
-            className="text-center mb-20"
-            {...fadeInUp}
-          >
-            <span className="inline-block px-4 py-1 rounded-full bg-[#238636]/20 border border-[#238636]/30 text-[#39d353] font-mono text-sm mb-6">
+      {/* Features - Mobile: Single Column, Stacked */}
+      <section className="py-16 lg:py-24 bg-gradient-to-b from-[#0d1117] to-[#050505]">
+        <div className="max-w-6xl mx-auto px-4">
+          <motion.div className="text-center mb-10 lg:mb-16" {...fadeIn}>
+            <span className="inline-block px-3 py-1 rounded-full bg-[#238636]/20 border border-[#238636]/30 text-[#39d353] text-xs font-mono mb-4">
               How It Works
             </span>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Your Streak,<br />
-              <span className="text-[#8b949e]">Always Protected.</span>
+            <h2 className="text-2xl lg:text-4xl font-bold">
+              Your Streak, Protected.
             </h2>
           </motion.div>
 
-          <motion.div
-            className="grid md:grid-cols-3 gap-8"
-            variants={staggerContainer}
-            initial="initial"
-            whileInView="whileInView"
-            viewport={{ once: true, margin: '-100px' }}
-          >
+          {/* Feature Cards - Full Width on Mobile */}
+          <div className="space-y-4 lg:grid lg:grid-cols-3 lg:gap-6 lg:space-y-0">
             {[
               {
-                icon: <Shield className="text-[#58a6ff]" size={28} />,
-                title: 'Connect Securely',
-                description: 'Authorize via official GitHub App. No passwords, no tokens, no risks.',
+                icon: <Shield className="text-[#58a6ff]" size={22} />,
+                title: 'Secure',
+                desc: 'Official GitHub App. No passwords or tokens.',
               },
               {
-                icon: <Zap className="text-[#d29922]" size={28} />,
-                title: 'We Monitor Daily',
-                description: 'Our cron job checks your activity at midnight UTC. If you coded, we sleep.',
+                icon: <Zap className="text-[#d29922]" size={22} />,
+                title: 'Automatic',
+                desc: 'Daily monitoring at midnight UTC.',
               },
               {
-                icon: <Terminal className="text-[#39d353]" size={28} />,
-                title: 'Auto-Commit Backup',
-                description: 'If no commits detected, we make a small README update. Streak saved.',
+                icon: <Terminal className="text-[#39d353]" size={22} />,
+                title: 'Transparent',
+                desc: 'Only touches README. Never your code.',
               },
-            ].map((feature, i) => (
+            ].map((f, i) => (
               <motion.div
                 key={i}
-                className="group p-8 rounded-xl bg-[#161b22] border border-[#30363d] hover:border-[#58a6ff]/50 transition-all duration-300"
-                variants={{
-                  initial: { opacity: 0, y: 30 },
-                  whileInView: { opacity: 1, y: 0, transition: { duration: 0.5 } }
-                }}
+                {...fadeIn}
+                transition={{ delay: i * 0.1 }}
+                className="flex items-start gap-4 p-4 lg:p-6 bg-[#161b22] border border-[#30363d] rounded-xl"
               >
-                <div className="w-14 h-14 rounded-xl bg-[#0d1117] flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  {feature.icon}
+                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-[#0d1117] flex items-center justify-center flex-shrink-0">
+                  {f.icon}
                 </div>
-                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-[#8b949e] leading-relaxed">{feature.description}</p>
+                <div>
+                  <h3 className="font-bold text-base lg:text-lg mb-1">{f.title}</h3>
+                  <p className="text-sm text-[#8b949e]">{f.desc}</p>
+                </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* TERMINAL DEMO SECTION */}
-      <section className="relative py-32 bg-[#050505]">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <motion.div {...fadeInUp}>
-              <span className="inline-block font-mono text-xs text-[#d29922] mb-4">
-                [log] automation.service
-              </span>
-              <h2 className="text-4xl md:text-5xl font-bold mb-6">
-                Transparent<br />
-                <span className="text-[#8b949e]">& Ethical.</span>
-              </h2>
-              <p className="text-[#8b949e] text-lg leading-relaxed mb-8">
-                Every action is logged and visible. We only touch your README file with a small timestamp update.
-                Your code logic is never modified.
-              </p>
+      {/* Terminal Demo - Mobile: Terminal on Top */}
+      <section className="py-16 lg:py-24 bg-[#050505]">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 
-              <ul className="space-y-4">
-                {[
-                  'Open source codebase',
-                  'Official GitHub App identity',
-                  'Revoke access anytime',
-                ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 font-mono text-sm">
-                    <span className="w-5 h-5 rounded-full bg-[#238636]/20 flex items-center justify-center text-[#39d353]">✓</span>
+            {/* Terminal First on Mobile */}
+            <motion.div {...fadeIn} className="w-full order-1 lg:order-2">
+              <TerminalWindow title="automation.log">
+                <TerminalLine prompt={false}>
+                  <span className="text-[#8b949e]"># 00:00 UTC</span>
+                </TerminalLine>
+                <TerminalLine prompt={false}>Checking activity...</TerminalLine>
+                <TerminalLine prompt={false}>
+                  <span className="text-[#f85149]">⚠ No commits</span>
+                </TerminalLine>
+                <TerminalLine prompt={false}>
+                  <span className="text-[#d29922]">→ Backup commit...</span>
+                </TerminalLine>
+                <TerminalLine prompt={false}>
+                  <span className="text-[#39d353]">✓ Streak saved!</span>
+                </TerminalLine>
+              </TerminalWindow>
+            </motion.div>
+
+            {/* Text Content */}
+            <motion.div {...fadeIn} className="order-2 lg:order-1">
+              <h2 className="text-2xl lg:text-4xl font-bold mb-4">
+                100% Transparent
+              </h2>
+              <p className="text-[#8b949e] mb-6 text-sm lg:text-base">
+                Every action is logged. We only update your README timestamp.
+                Your code is never touched.
+              </p>
+              <ul className="space-y-3">
+                {['Open source', 'Revoke anytime', 'No hidden fees'].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm">
+                    <span className="w-5 h-5 rounded-full bg-[#238636]/20 flex items-center justify-center text-[#39d353] text-xs">✓</span>
                     {item}
                   </li>
                 ))}
               </ul>
             </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <TerminalWindow title="daily-check.log">
-                <TerminalLine prompt={false}>
-                  <span className="text-[#8b949e]"># Cron Job - 00:00 UTC</span>
-                </TerminalLine>
-                <TerminalLine prompt={false}>Checking user/repo for activity...</TerminalLine>
-                <TerminalLine prompt={false}>
-                  <span className="text-[#f85149]">⚠ No commits in last 24h</span>
-                </TerminalLine>
-                <TerminalLine prompt={false}>
-                  <span className="text-[#d29922]">→ Running backup protocol...</span>
-                </TerminalLine>
-                <TerminalLine prompt={false}>git add README.md</TerminalLine>
-                <TerminalLine prompt={false}>git commit -m "docs: update timestamp"</TerminalLine>
-                <TerminalLine prompt={false}>
-                  <span className="text-[#39d353]">✓ Streak protected!</span>
-                </TerminalLine>
-              </TerminalWindow>
-            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* CTA SECTION */}
-      <section className="relative py-40 bg-gradient-to-t from-[#0d1117] to-[#050505]">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <motion.div {...fadeInUp}>
-            <h2 className="text-5xl md:text-7xl font-bold mb-8">
-              Ready to start?
+      {/* CTA Section - Full Width Buttons */}
+      <section className="py-20 lg:py-32 bg-gradient-to-t from-[#0d1117] to-[#050505]">
+        <div className="max-w-lg mx-auto px-4 text-center">
+          <motion.div {...fadeIn}>
+            <h2 className="text-3xl lg:text-5xl font-bold mb-4">
+              Ready?
             </h2>
-            <p className="text-xl text-[#8b949e] mb-12 max-w-xl mx-auto">
-              Join developers who never break their streak again. Free, open source, and privacy-first.
+            <p className="text-[#8b949e] mb-8 text-sm lg:text-base">
+              Join developers who never break their streak again.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {/* Stacked Buttons - Full Width */}
+            <div className="space-y-3">
               <a
                 href="/api/auth/github"
-                className="group relative inline-flex items-center gap-3 bg-[#238636] hover:bg-[#2ea043] text-white px-8 py-4 rounded-lg font-bold text-lg transition-all hover:shadow-[0_0_30px_rgba(57,211,83,0.3)]"
+                className="flex items-center justify-center gap-2 w-full bg-[#238636] hover:bg-[#2ea043] active:bg-[#238636] text-white py-4 rounded-xl font-bold transition-colors touch-manipulation"
               >
-                <Github size={22} />
+                <Github size={20} />
                 <span>Connect GitHub</span>
-                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                <ArrowRight size={18} />
               </a>
-
               <a
                 href="https://github.com/HakkanShah/commit-habit"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 px-8 py-4 rounded-lg border border-[#30363d] hover:border-[#8b949e] text-[#8b949e] hover:text-white font-bold transition-all"
+                className="flex items-center justify-center gap-2 w-full border border-[#30363d] hover:border-[#8b949e] text-[#8b949e] hover:text-white py-4 rounded-xl font-bold transition-colors touch-manipulation"
               >
-                <Terminal size={20} />
+                <Terminal size={18} />
                 <span>View Source</span>
+                <ExternalLink size={14} />
               </a>
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="py-12 border-t border-[#30363d]">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6 text-sm text-[#8b949e] font-mono">
-          <div>
-            user@commit-habit:~$ <span className="text-white">echo</span> "Made with <span className="text-[#f85149]">❤</span> for developers"
-          </div>
-          <div className="flex gap-8">
-            <a href="#" className="hover:text-white transition-colors">/privacy</a>
-            <a href="#" className="hover:text-white transition-colors">/terms</a>
-            <a href="#" className="hover:text-white transition-colors">/status</a>
+      {/* Footer - Compact */}
+      <footer className="py-6 border-t border-[#30363d]">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-[#8b949e]">
+          <span>Made with ❤️ for developers</span>
+          <div className="flex gap-6">
+            <a href="#" className="hover:text-white">Privacy</a>
+            <a href="#" className="hover:text-white">Terms</a>
+            <a href="#" className="hover:text-white">Status</a>
           </div>
         </div>
       </footer>

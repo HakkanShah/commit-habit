@@ -1,26 +1,16 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-
-// ============================================================================
-// Types
-// ============================================================================
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface ContributionGraphProps {
     animated?: boolean
     showLabels?: boolean
-    className?: string
 }
 
-// ============================================================================
-// Generate Contribution Data
-// ============================================================================
-
-// Simple seeded random number generator (Linear Congruential Generator)
 function createSeededRandom(seed: number) {
     let state = seed % 2147483647
     if (state <= 0) state += 2147483646
-
     return () => {
         state = (state * 16807) % 2147483647
         return (state - 1) / 2147483646
@@ -28,184 +18,216 @@ function createSeededRandom(seed: number) {
 }
 
 function generateSparseContributions(): number[] {
-    const random = createSeededRandom(12345) // Fixed seed
-    const data: number[] = []
-
-    for (let i = 0; i < 52 * 7; i++) {
+    const random = createSeededRandom(12345)
+    return Array.from({ length: 371 }, () => {
         const r = random()
-        if (r > 0.92) {
-            data.push(Math.floor(random() * 2) + 1) // 1-2
-        } else if (r > 0.85) {
-            data.push(1)
-        } else {
-            data.push(0)
-        }
-    }
-    return data
+        if (r > 0.92) return Math.floor(random() * 2) + 1
+        if (r > 0.85) return 1
+        return 0
+    })
 }
 
 function generateFullContributions(): number[] {
-    const random = createSeededRandom(67890) // Different fixed seed
-    const data: number[] = []
-
-    for (let i = 0; i < 52 * 7; i++) {
+    const random = createSeededRandom(67890)
+    return Array.from({ length: 371 }, () => {
         const r = random()
-        if (r > 0.15) {
+        if (r > 0.1) {
             const level = random()
-            if (level > 0.7) {
-                data.push(4) // High activity
-            } else if (level > 0.4) {
-                data.push(3)
-            } else if (level > 0.2) {
-                data.push(2)
-            } else {
-                data.push(1)
-            }
-        } else {
-            data.push(0)
+            if (level > 0.6) return 4
+            if (level > 0.35) return 3
+            if (level > 0.15) return 2
+            return 1
         }
-    }
-    return data
+        return 0
+    })
 }
 
-// ============================================================================
-// Component
-// ============================================================================
+const COLORS = ['#161b22', '#0e4429', '#006d32', '#26a641', '#39d353']
+const WEEKS = 52
 
-export function ContributionGraph({
-    animated = true,
-    showLabels = true,
-    className = '',
-}: ContributionGraphProps) {
+function getMonthLabels() {
+    const today = new Date()
+    const startDate = new Date(today)
+    startDate.setDate(startDate.getDate() - (WEEKS * 7))
+    startDate.setDate(startDate.getDate() - startDate.getDay())
+
+    const months: { name: string; col: number }[] = []
+    let currentMonth = -1
+
+    for (let week = 0; week < WEEKS; week++) {
+        const weekDate = new Date(startDate)
+        weekDate.setDate(weekDate.getDate() + week * 7)
+        const month = weekDate.getMonth()
+
+        if (month !== currentMonth) {
+            currentMonth = month
+            months.push({
+                name: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month],
+                col: week
+            })
+        }
+    }
+    return months
+}
+
+export function ContributionGraph({ animated = true, showLabels = true }: ContributionGraphProps) {
     const [isAfter, setIsAfter] = useState(false)
-
-    // Generate stable data with useMemo
     const sparseData = useMemo(() => generateSparseContributions(), [])
     const fullData = useMemo(() => generateFullContributions(), [])
+    const monthLabels = useMemo(() => getMonthLabels(), [])
 
     useEffect(() => {
         if (!animated) return
-
-        // Initial delay, then toggle
-        const timer = setTimeout(() => {
-            setIsAfter(true)
-        }, 2000)
-
-        // Toggle back and forth
-        const interval = setInterval(() => {
-            setIsAfter(prev => !prev)
-        }, 5000)
-
-        return () => {
-            clearTimeout(timer)
-            clearInterval(interval)
-        }
+        const timer = setTimeout(() => setIsAfter(true), 2500)
+        const interval = setInterval(() => setIsAfter(prev => !prev), 6000)
+        return () => { clearTimeout(timer); clearInterval(interval) }
     }, [animated])
 
-    const currentData = isAfter ? fullData : sparseData
+    const data = isAfter ? fullData : sparseData
 
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const days = ['', 'Mon', '', 'Wed', '', 'Fri', '']
+    // Calculate exact width: 52 weeks * (10px cell + 3px gap) - 3px final gap + day labels
+    const gridWidth = WEEKS * 13 - 3
+    const totalWidth = showLabels ? gridWidth + 32 : gridWidth
 
     return (
-        <div className={`contribution-graph-container ${className}`}>
-            {/* Before/After Label */}
-            <div className="flex items-center justify-center gap-4 mb-4">
-                <span className={`text-sm font-medium transition-all duration-500 ${!isAfter ? 'text-[var(--text-muted)] opacity-100' : 'text-[var(--text-muted)] opacity-40'}`}>
-                    Before 😢
-                </span>
-                <div className="w-8 h-0.5 bg-gradient-to-r from-[var(--text-muted)] to-[var(--accent-green)] rounded" />
-                <span className={`text-sm font-medium transition-all duration-500 ${isAfter ? 'text-[var(--accent-green)] opacity-100' : 'text-[var(--text-muted)] opacity-40'}`}>
-                    After 🚀
-                </span>
+        <div className="flex flex-col items-center w-full">
+            {/* Cinematic Before/After Toggle */}
+            <div className="flex items-center gap-4 mb-6">
+                <motion.span
+                    className="text-sm font-medium"
+                    animate={{
+                        color: !isAfter ? '#ffffff' : '#484f58',
+                        scale: !isAfter ? 1.05 : 1
+                    }}
+                    transition={{ duration: 0.4 }}
+                >
+                    Before
+                </motion.span>
+
+                <div className="relative w-16 h-1 bg-[#21262d] rounded-full overflow-hidden">
+                    <motion.div
+                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-[#f85149] to-[#39d353] rounded-full"
+                        initial={{ width: '0%' }}
+                        animate={{ width: isAfter ? '100%' : '0%' }}
+                        transition={{ duration: 0.8, ease: 'easeInOut' }}
+                    />
+                </div>
+
+                <motion.span
+                    className="text-sm font-medium"
+                    animate={{
+                        color: isAfter ? '#39d353' : '#484f58',
+                        scale: isAfter ? 1.05 : 1,
+                        textShadow: isAfter ? '0 0 20px rgba(57,211,83,0.5)' : '0 0 0px transparent'
+                    }}
+                    transition={{ duration: 0.4 }}
+                >
+                    After
+                </motion.span>
             </div>
 
-            <div className="contribution-graph">
-                {/* Month Labels */}
-                {showLabels && (
-                    <div className="contribution-months">
-                        <div className="w-8" /> {/* Spacer for day labels */}
-                        {months.map((month, i) => (
-                            <span key={i} className="contribution-month-label">
-                                {month}
-                            </span>
-                        ))}
-                    </div>
-                )}
-
-                <div className="flex">
-                    {/* Day Labels */}
+            {/* Graph Container - Centered, No Extra Space */}
+            <div className="overflow-x-auto w-full flex justify-center">
+                <div style={{ width: `${totalWidth}px` }}>
+                    {/* Month Labels */}
                     {showLabels && (
-                        <div className="contribution-days">
-                            {days.map((day, i) => (
-                                <span key={i} className="contribution-day-label">
-                                    {day}
+                        <div className="relative h-4 mb-1" style={{ marginLeft: '32px' }}>
+                            {monthLabels.map((m, i) => (
+                                <span
+                                    key={i}
+                                    className="absolute text-[11px] text-[#8b949e]"
+                                    style={{ left: `${m.col * 13}px` }}
+                                >
+                                    {m.name}
                                 </span>
                             ))}
                         </div>
                     )}
 
-                    {/* Grid */}
-                    <div className="contribution-grid">
-                        {Array.from({ length: 52 }).map((_, weekIndex) => (
-                            <div key={weekIndex} className="contribution-week">
-                                {Array.from({ length: 7 }).map((_, dayIndex) => {
-                                    const index = weekIndex * 7 + dayIndex
-                                    const level = currentData[index] || 0
-                                    return (
-                                        <div
-                                            key={dayIndex}
-                                            className={`contribution-cell level-${level}`}
-                                            style={{
-                                                transitionDelay: `${(weekIndex * 7 + dayIndex) * 2}ms`,
-                                            }}
-                                        />
-                                    )
-                                })}
+                    {/* Grid with Day Labels */}
+                    <div className="flex">
+                        {showLabels && (
+                            <div className="flex flex-col justify-around w-8 pr-1" style={{ height: '88px' }}>
+                                <span className="text-[10px] text-[#8b949e] leading-none">&nbsp;</span>
+                                <span className="text-[10px] text-[#8b949e] leading-none">Mon</span>
+                                <span className="text-[10px] text-[#8b949e] leading-none">&nbsp;</span>
+                                <span className="text-[10px] text-[#8b949e] leading-none">Wed</span>
+                                <span className="text-[10px] text-[#8b949e] leading-none">&nbsp;</span>
+                                <span className="text-[10px] text-[#8b949e] leading-none">Fri</span>
+                                <span className="text-[10px] text-[#8b949e] leading-none">&nbsp;</span>
                             </div>
-                        ))}
-                    </div>
-                </div>
+                        )}
 
-                {/* Legend */}
-                <div className="contribution-legend">
-                    <span className="text-xs text-[var(--text-muted)]">Less</span>
-                    <div className="contribution-cell level-0" />
-                    <div className="contribution-cell level-1" />
-                    <div className="contribution-cell level-2" />
-                    <div className="contribution-cell level-3" />
-                    <div className="contribution-cell level-4" />
-                    <span className="text-xs text-[var(--text-muted)]">More</span>
+                        {/* Contribution Grid with Wave Animation */}
+                        <div className="flex gap-[3px]">
+                            {Array.from({ length: WEEKS }).map((_, week) => (
+                                <div key={week} className="flex flex-col gap-[3px]">
+                                    {Array.from({ length: 7 }).map((_, day) => {
+                                        const idx = week * 7 + day
+                                        const level = data[idx] ?? 0
+                                        const delay = week * 15 + day * 5
+
+                                        return (
+                                            <motion.div
+                                                key={`${week}-${day}-${isAfter}`}
+                                                className="w-[10px] h-[10px] rounded-[2px]"
+                                                initial={{
+                                                    backgroundColor: COLORS[0],
+                                                    scale: 0.8,
+                                                    opacity: 0.5
+                                                }}
+                                                animate={{
+                                                    backgroundColor: COLORS[level],
+                                                    scale: 1,
+                                                    opacity: 1
+                                                }}
+                                                transition={{
+                                                    duration: 0.3,
+                                                    delay: delay / 1000,
+                                                    ease: 'easeOut'
+                                                }}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="flex items-center justify-end gap-[3px] mt-4">
+                        <span className="text-[11px] text-[#8b949e] mr-1">Less</span>
+                        {COLORS.map((color, i) => (
+                            <div
+                                key={i}
+                                className="w-[10px] h-[10px] rounded-[2px]"
+                                style={{ backgroundColor: color }}
+                            />
+                        ))}
+                        <span className="text-[11px] text-[#8b949e] ml-1">More</span>
+                    </div>
                 </div>
             </div>
         </div>
     )
 }
 
-// ============================================================================
-// Mini Version for Cards
-// ============================================================================
-
 export function ContributionGraphMini({ filled = false }: { filled?: boolean }) {
     const data = useMemo(() => {
-        if (filled) return generateFullContributions().slice(0, 7 * 12)
-        return generateSparseContributions().slice(0, 7 * 12)
+        return filled ? generateFullContributions().slice(0, 84) : generateSparseContributions().slice(0, 84)
     }, [filled])
 
     return (
-        <div className="contribution-graph-mini">
-            {Array.from({ length: 12 }).map((_, weekIndex) => (
-                <div key={weekIndex} className="contribution-week">
-                    {Array.from({ length: 7 }).map((_, dayIndex) => {
-                        const index = weekIndex * 7 + dayIndex
-                        const level = data[index] || 0
-                        return (
-                            <div
-                                key={dayIndex}
-                                className={`contribution-cell-mini level-${level}`}
-                            />
-                        )
-                    })}
+        <div className="flex gap-[2px]">
+            {Array.from({ length: 12 }).map((_, week) => (
+                <div key={week} className="flex flex-col gap-[2px]">
+                    {Array.from({ length: 7 }).map((_, day) => (
+                        <div
+                            key={day}
+                            className="w-[6px] h-[6px] rounded-[1px]"
+                            style={{ backgroundColor: COLORS[data[week * 7 + day] || 0] }}
+                        />
+                    ))}
                 </div>
             ))}
         </div>

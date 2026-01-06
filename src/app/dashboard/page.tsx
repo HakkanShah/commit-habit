@@ -2,178 +2,151 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus } from 'lucide-react'
+import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRight } from 'lucide-react'
 import { InstallationCard } from './installation-card'
 import { formatDate } from '@/lib/utils'
 
 export default async function DashboardPage() {
     const session = await getSession()
+    if (!session) redirect('/')
 
-    if (!session) {
-        redirect('/')
-    }
-
-    // Fetch user data with installations
     const user = await prisma.user.findUnique({
         where: { id: session.userId },
         include: {
-            accounts: {
-                where: { provider: 'github' },
-            },
+            accounts: { where: { provider: 'github' } },
             installations: {
-                include: {
-                    activityLogs: {
-                        orderBy: { createdAt: 'desc' },
-                        take: 5,
-                    },
-                },
+                include: { activityLogs: { orderBy: { createdAt: 'desc' }, take: 3 } },
                 orderBy: { createdAt: 'desc' },
             },
         },
     })
 
-    if (!user) {
-        redirect('/')
-    }
+    if (!user) redirect('/')
 
     const githubAccount = user.accounts.find(a => a.provider === 'github')
     const displayName = user.name || githubAccount?.providerUsername || 'User'
     const githubAppUrl = `https://github.com/apps/${process.env.NEXT_PUBLIC_GITHUB_APP_NAME || 'commit-habit'}/installations/new`
+    const activeCount = user.installations.filter(i => i.active).length
 
     return (
-        <div className="min-h-screen bg-[var(--background)]">
-            {/* Header */}
-            <header className="border-b border-[var(--border)] bg-[var(--card)]/80 backdrop-blur-md sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-                        <div className="w-8 h-8 rounded-lg bg-[var(--accent-green)] flex items-center justify-center">
-                            <GitCommit size={16} className="text-white" />
+        <div className="min-h-screen bg-[#0d1117] text-white">
+            {/* Header - Mobile Optimized */}
+            <header className="sticky top-0 z-50 bg-[#0d1117]/95 backdrop-blur border-b border-[#30363d]">
+                <div className="flex items-center justify-between px-4 py-3">
+                    <Link href="/" className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#39d353] flex items-center justify-center">
+                            <GitCommit size={16} />
                         </div>
-                        <span className="gradient-text">Commit Habit</span>
+                        <span className="font-bold hidden sm:inline">Commit Habit</span>
                     </Link>
-
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            {user.avatarUrl && (
-                                <img
-                                    src={user.avatarUrl}
-                                    alt={displayName}
-                                    className="w-8 h-8 rounded-full ring-2 ring-[var(--border)]"
-                                />
-                            )}
-                            <span className="font-medium hidden sm:inline">{displayName}</span>
-                        </div>
-                        <a
-                            href="/api/auth/logout"
-                            className="btn btn-ghost text-sm text-[var(--muted)]"
-                        >
-                            <LogOut size={16} />
-                            <span className="hidden sm:inline">Logout</span>
+                    <div className="flex items-center gap-3">
+                        {user.avatarUrl && (
+                            <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
+                        )}
+                        <a href="/api/auth/logout" className="text-[#8b949e] hover:text-white p-2 -mr-2">
+                            <LogOut size={18} />
                         </a>
                     </div>
                 </div>
             </header>
 
-            <main className="container mx-auto px-4 py-8">
-                {/* Page Title */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <main className="px-4 py-6 max-w-4xl mx-auto">
+                {/* Welcome + Add Button */}
+                <div className="flex items-center justify-between mb-6">
                     <div>
-                        <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
-                        <p className="text-[var(--muted)]">
-                            Manage your automated repositories
-                        </p>
+                        <h1 className="text-xl font-bold">Hey, {displayName.split(' ')[0]}!</h1>
+                        <p className="text-sm text-[#8b949e]">{activeCount} active automation{activeCount !== 1 ? 's' : ''}</p>
                     </div>
-                    <a href={githubAppUrl} className="btn btn-primary">
+                    <a
+                        href={githubAppUrl}
+                        className="flex items-center gap-2 bg-[#238636] hover:bg-[#2ea043] active:bg-[#238636] px-4 py-3 rounded-xl text-sm font-bold touch-manipulation"
+                    >
                         <Plus size={18} />
-                        Add Repository
+                        <span className="hidden sm:inline">Add Repo</span>
                     </a>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <div className="card">
-                        <p className="text-sm text-[var(--muted)] mb-1">Total Repositories</p>
-                        <p className="text-3xl font-bold">{user.installations.length}</p>
+                {/* Stats Cards - 2 Column Grid */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4">
+                        <p className="text-xs text-[#8b949e] mb-1">Repositories</p>
+                        <p className="text-2xl font-bold">{user.installations.length}</p>
                     </div>
-                    <div className="card">
-                        <p className="text-sm text-[var(--muted)] mb-1">Active Automations</p>
-                        <p className="text-3xl font-bold text-[var(--accent)]">
-                            {user.installations.filter(i => i.active).length}
-                        </p>
-                    </div>
-                    <div className="card">
-                        <p className="text-sm text-[var(--muted)] mb-1">Member Since</p>
-                        <p className="text-lg font-medium">{formatDate(user.createdAt)}</p>
+                    <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-4">
+                        <p className="text-xs text-[#8b949e] mb-1">Active</p>
+                        <p className="text-2xl font-bold text-[#39d353]">{activeCount}</p>
                     </div>
                 </div>
 
-                {/* Installations List */}
+                {/* Repositories List */}
                 {user.installations.length === 0 ? (
-                    <div className="card text-center py-12">
-                        <div className="w-16 h-16 rounded-full bg-[var(--secondary)] flex items-center justify-center mx-auto mb-4">
-                            <Github size={32} className="text-[var(--muted)]" />
+                    <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-8 text-center">
+                        <div className="w-14 h-14 rounded-full bg-[#21262d] flex items-center justify-center mx-auto mb-4">
+                            <Github size={24} className="text-[#8b949e]" />
                         </div>
-                        <h2 className="text-xl font-semibold mb-2">No repositories connected</h2>
-                        <p className="text-[var(--muted)] mb-6 max-w-md mx-auto">
-                            Install the Commit Habit app on a repository to start automating your daily activity.
-                        </p>
-                        <a href={githubAppUrl} className="btn btn-primary">
+                        <h2 className="font-bold mb-2">No repos yet</h2>
+                        <p className="text-sm text-[#8b949e] mb-6">Connect a repository to start.</p>
+                        <a
+                            href={githubAppUrl}
+                            className="inline-flex items-center gap-2 bg-[#238636] hover:bg-[#2ea043] px-6 py-3 rounded-xl font-bold text-sm touch-manipulation"
+                        >
                             <Github size={18} />
-                            Connect Your First Repository
+                            Connect Repository
                         </a>
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        <h2 className="text-lg font-semibold">Your Repositories</h2>
-                        {user.installations.map((installation) => (
-                            <InstallationCard
-                                key={installation.id}
-                                installation={{
-                                    id: installation.id,
-                                    installationId: installation.installationId,
-                                    repoFullName: installation.repoFullName,
-                                    active: installation.active,
-                                    commitsToday: installation.commitsToday,
-                                    lastRunAt: installation.lastRunAt?.toISOString() || null,
-                                    createdAt: installation.createdAt.toISOString(),
-                                    activityLogs: installation.activityLogs.map(log => ({
-                                        id: log.id,
-                                        action: log.action,
-                                        message: log.message,
-                                        createdAt: log.createdAt.toISOString(),
-                                    })),
-                                }}
-                            />
-                        ))}
+                    <div className="space-y-3">
+                        <h2 className="text-sm font-bold text-[#8b949e] uppercase tracking-wide">Your Repos</h2>
+                        <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden divide-y divide-[#30363d]">
+                            {user.installations.map((inst) => (
+                                <InstallationCard
+                                    key={inst.id}
+                                    installation={{
+                                        id: inst.id,
+                                        installationId: inst.installationId,
+                                        repoFullName: inst.repoFullName,
+                                        active: inst.active,
+                                        commitsToday: inst.commitsToday,
+                                        lastRunAt: inst.lastRunAt?.toISOString() || null,
+                                        createdAt: inst.createdAt.toISOString(),
+                                        activityLogs: inst.activityLogs.map(log => ({
+                                            id: log.id,
+                                            action: log.action,
+                                            message: log.message,
+                                            createdAt: log.createdAt.toISOString(),
+                                        })),
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
                 )}
 
-                {/* Uninstall Instructions */}
-                <div className="card mt-8 border-[var(--warning)]/30 bg-[var(--warning)]/5">
-                    <div className="flex items-start gap-3">
-                        <AlertCircle className="text-[var(--warning)] flex-shrink-0 mt-0.5" size={20} />
-                        <div>
-                            <h3 className="font-semibold mb-1">How to Uninstall</h3>
-                            <p className="text-sm text-[var(--muted)] mb-2">
-                                To completely remove automation from a repository:
-                            </p>
-                            <ol className="text-sm text-[var(--muted)] list-decimal ml-4 space-y-1">
-                                <li>Go to your GitHub Settings → Applications → Installed GitHub Apps</li>
-                                <li>Find &quot;Commit Habit&quot; and click Configure</li>
-                                <li>Remove the repository or uninstall the app entirely</li>
-                            </ol>
-                            <a
-                                href="https://github.com/settings/installations"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-sm text-[var(--primary)] hover:underline mt-2"
-                            >
-                                Go to GitHub Settings
-                                <ExternalLink size={14} />
-                            </a>
+                {/* Help Card - Collapsible Style */}
+                <details className="mt-6 bg-[#161b22] border border-[#30363d] rounded-xl">
+                    <summary className="flex items-center justify-between px-4 py-4 cursor-pointer list-none">
+                        <div className="flex items-center gap-3">
+                            <AlertCircle size={18} className="text-[#d29922]" />
+                            <span className="font-medium text-sm">How to uninstall</span>
                         </div>
+                        <ChevronRight size={18} className="text-[#8b949e] transition-transform details-open:rotate-90" />
+                    </summary>
+                    <div className="px-4 pb-4 text-sm text-[#8b949e]">
+                        <ol className="list-decimal ml-4 space-y-1">
+                            <li>Go to GitHub Settings → Applications</li>
+                            <li>Find &quot;Commit Habit&quot; and click Configure</li>
+                            <li>Remove the repo or uninstall</li>
+                        </ol>
+                        <a
+                            href="https://github.com/settings/installations"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[#58a6ff] mt-3"
+                        >
+                            Open GitHub Settings <ExternalLink size={12} />
+                        </a>
                     </div>
-                </div>
+                </details>
             </main>
         </div>
     )
