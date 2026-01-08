@@ -28,12 +28,19 @@ const generateData = (type: 'before' | 'after') => {
     })
 }
 
-// Stable seed data
-const beforeData = generateData('before')
-const afterData = generateData('after')
+// Stable seed data - moved to component to avoid hydration mismatch
 
 export function ContributionDemo() {
     const [mode, setMode] = useState<'before' | 'after'>('before')
+    const [data, setData] = useState<{ before: number[], after: number[] } | null>(null)
+
+    // Generate data on client side only to prevent hydration mismatch
+    useEffect(() => {
+        setData({
+            before: generateData('before'),
+            after: generateData('after')
+        })
+    }, [])
 
     // Auto-toggle every few seconds
     useEffect(() => {
@@ -93,7 +100,7 @@ export function ContributionDemo() {
                         <div key={colIndex} className={cn("flex flex-col gap-[3px]", colIndex >= 20 ? "hidden lg:flex" : "")}>
                             {Array.from({ length: ROWS }).map((_, rowIndex) => {
                                 const i = colIndex * ROWS + rowIndex
-                                const level = mode === 'before' ? beforeData[i] : afterData[i]
+                                const level = data ? (mode === 'before' ? data.before[i] : data.after[i]) : 0
 
                                 return (
                                     <motion.div

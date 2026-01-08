@@ -5,6 +5,7 @@ import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles } fro
 import { HeroSequence } from '@/components/hero-sequence'
 import { TerminalWindow, TerminalLine } from '@/components/terminal-window'
 import { ErrorBanner } from '@/components/error-banner'
+import { Particles } from '@/components/particles'
 
 const fadeInUp = {
   initial: { opacity: 0, y: 40 },
@@ -174,25 +175,9 @@ export default function HomePage() {
         <section className="relative py-24 lg:py-32 overflow-hidden">
           <div className="absolute inset-x-0 bottom-0 h-[600px] bg-gradient-to-t from-[#238636]/10 via-[#238636]/5 to-transparent pointer-events-none" />
 
-          {/* Floating Particles/Stars */}
-          {[...Array(5)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-[#39d353] rounded-full"
-              initial={{ opacity: 0, y: 100, x: Math.random() * 1000 }}
-              animate={{
-                opacity: [0, 1, 0],
-                y: -100,
-                x: Math.random() * 1000
-              }}
-              transition={{
-                duration: Math.random() * 3 + 2,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-                ease: "linear"
-              }}
-            />
-          ))}
+
+          {/* Floating Particles/Stars - Client Only */}
+          <Particles />
 
           <div className="relative max-w-xl mx-auto px-4 text-center z-10">
             <motion.div {...fadeInUp}>
