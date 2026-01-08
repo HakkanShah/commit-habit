@@ -57,35 +57,38 @@ html::-webkit-scrollbar {
   --contrib-4: #39d353;
 }
 
+/* Dynamic Backgrounds */
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(48, 54, 61, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(48, 54, 61, 0.1) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(#30363d 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(circle at center, black, transparent 80%);
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(13, 17, 23, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(48, 54, 61, 0.4);
+}
+
+.glass-card {
+  background: linear-gradient(180deg, rgba(22, 27, 34, 0.8) 0%, rgba(13, 17, 23, 0.9) 100%);
+  border: 1px solid rgba(48, 54, 61, 0.6);
+  backdrop-filter: blur(8px);
+}
+
 /* Animations */
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
-}
-
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-
-@keyframes pulse-green {
-  0%, 100% { box-shadow: 0 0 8px var(--accent-green); }
-  50% { box-shadow: 0 0 16px var(--accent-green); }
-}
-
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(100%); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes slideOutRight {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(100%); }
 }
 
 @keyframes float {
@@ -93,9 +96,18 @@ html::-webkit-scrollbar {
   50% { transform: translateY(-10px); }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+@keyframes grid-move {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(40px); }
+}
+
+.animate-grid {
+  animation: grid-move 20s linear infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; box-shadow: 0 0 10px rgba(57, 211, 83, 0.2); }
+  50% { opacity: 1; box-shadow: 0 0 20px rgba(57, 211, 83, 0.4); }
 }
 
 /* Utilities */

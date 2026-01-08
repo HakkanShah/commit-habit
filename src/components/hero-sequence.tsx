@@ -20,15 +20,10 @@ export function HeroSequence() {
     }, [])
 
     return (
-        <section className="relative min-h-screen flex flex-col items-center justify-center bg-[#0d1117] overflow-hidden">
-            {/* Subtle Background */}
-            <div
-                className="absolute inset-0 opacity-20 pointer-events-none"
-                style={{
-                    backgroundImage: 'radial-gradient(#30363d 1px, transparent 1px)',
-                    backgroundSize: '16px 16px'
-                }}
-            />
+        <section className="relative min-h-screen flex flex-col items-center justify-center bg-[#0d1117] overflow-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
+            {/* Dynamic Backgrounds */}
+            <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] animate-grid pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-[#050505]/80 pointer-events-none" />
 
             {/* Main Content */}
             <div className="relative z-10 w-full px-4 py-8 flex flex-col items-center">
