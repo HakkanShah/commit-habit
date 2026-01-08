@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Github, ChevronDown } from 'lucide-react'
-import { ContributionGraph } from './contribution-graph'
+import { ContributionDemo } from './contribution-demo'
 
 export function HeroSequence() {
     const [step, setStep] = useState(0)
@@ -26,51 +26,38 @@ export function HeroSequence() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-[#050505]/80 pointer-events-none" />
 
             {/* Main Content */}
-            <div className="relative z-10 w-full px-4 py-8 flex flex-col items-center">
+            <div className="relative z-10 w-full max-w-5xl mx-auto px-4 py-12 flex flex-col items-center gap-12">
 
                 {/* Animated Title - Text Only */}
                 <motion.h1
-                    initial={{ opacity: 0, y: -20, letterSpacing: '0.2em' }}
-                    animate={{ opacity: 1, y: 0, letterSpacing: '0.02em' }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className="text-3xl sm:text-4xl lg:text-5xl font-black mb-8 lg:mb-12 tracking-tight"
+                    initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+                    animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                    className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 whitespace-nowrap"
                 >
-                    <span className="text-white">Commit</span>
-                    <span className="text-[#39d353]">Habit</span>
+                    <span className="inline-block">Commit</span> <span className="text-[#39d353] drop-shadow-[0_0_30px_rgba(57,211,83,0.3)]">Habit</span>
                 </motion.h1>
 
-                {/* Contribution Graph */}
+                {/* Contribution Demo */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={step >= 1 ? { opacity: 1, y: 0 } : {}}
-                    transition={{ duration: 0.5 }}
-                    className="w-full max-w-4xl mb-8 lg:mb-10"
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
+                    className="w-full max-w-5xl mx-auto"
                 >
-                    <div className="bg-[#161b22] p-3 lg:p-5 rounded-lg border border-[#30363d]">
-                        <ContributionGraph animated={step >= 3} showLabels={true} />
-                    </div>
+                    <ContributionDemo />
                 </motion.div>
 
                 {/* Headline */}
-                <div className="text-center mb-6 lg:mb-8 px-2 min-h-[60px] flex items-center justify-center">
+                <div className="text-center min-h-[60px] flex items-center justify-center">
                     <AnimatePresence mode="wait">
-                        {step >= 2 && step < 4 && (
-                            <motion.p
-                                key="sub"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="text-sm lg:text-lg text-[#8b949e] font-mono"
-                            >
-                                Missed commits ≠ missed growth
-                            </motion.p>
-                        )}
-                        {step >= 4 && (
+                        {step >= 0 && (
                             <motion.h2
                                 key="main"
-                                initial={{ opacity: 0, y: 10 }}
+                                initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-2xl sm:text-3xl lg:text-5xl font-black leading-tight"
+                                transition={{ delay: 0.4 }}
+                                className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight"
                             >
                                 Consistency <span className="text-[#39d353]">&gt;</span> Motivation
                             </motion.h2>
@@ -81,40 +68,46 @@ export function HeroSequence() {
                 {/* CTA */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
-                    animate={step >= 5 ? { opacity: 1, y: 0 } : {}}
-                    transition={{ duration: 0.4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.6 }}
                     className="w-full max-w-sm px-4 lg:px-0"
                 >
                     <a
                         href="/api/auth/github"
-                        className="flex items-center justify-center gap-3 w-full bg-[#238636] hover:bg-[#2ea043] active:bg-[#238636] text-white py-4 px-6 rounded-xl font-bold text-base lg:text-lg transition-all touch-manipulation hover:shadow-[0_0_30px_rgba(57,211,83,0.4)]"
+                        className="group relative flex items-center justify-center gap-3 w-full bg-[#238636] hover:bg-[#2ea043] text-white py-4 px-6 rounded-xl font-bold text-lg transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(57,211,83,0.4)]"
                     >
-                        <Github size={20} />
+                        <Github size={22} className="group-hover:rotate-12 transition-transform" />
                         <span>Connect with GitHub</span>
-                        <ArrowRight size={18} />
+                        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+
+                        {/* Button Glow */}
+                        <div className="absolute inset-0 rounded-xl bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </a>
 
-                    <div className="flex items-center justify-center gap-4 mt-4 text-xs lg:text-sm text-[#8b949e]">
-                        <span className="flex items-center gap-1">
-                            <span className="text-[#39d353]">✓</span> No PAT
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="text-[#39d353]">✓</span> Open Source
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="text-[#39d353]">✓</span> Free
-                        </span>
-                    </div>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                        className="flex items-center justify-center gap-6 mt-6 text-sm text-[#8b949e]"
+                    >
+                        {['No PAT', 'Open Source', 'Free'].map((item, i) => (
+                            <span key={i} className="flex items-center gap-2">
+                                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#238636]/20 text-[#39d353] text-xs">✓</span>
+                                {item}
+                            </span>
+                        ))}
+                    </motion.div>
                 </motion.div>
             </div>
 
             {/* Scroll Indicator */}
             <motion.div
                 initial={{ opacity: 0 }}
-                animate={step >= 5 ? { opacity: 1 } : {}}
-                className="absolute bottom-6 lg:bottom-10 text-[#8b949e]"
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.5, duration: 1 }}
+                className="absolute bottom-4 text-[#8b949e]"
             >
-                <ChevronDown size={24} className="animate-bounce" />
+                <ChevronDown size={28} className="animate-bounce" />
             </motion.div>
         </section>
     )
