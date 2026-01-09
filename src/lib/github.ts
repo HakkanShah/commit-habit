@@ -345,6 +345,8 @@ export async function exchangeCodeForUser(code: string): Promise<{
         id: number
         login: string
         avatar_url: string
+        name: string
+        email: string | null
     }
 }> {
     validateOAuthCredentials()
@@ -419,12 +421,25 @@ export async function exchangeCodeForUser(code: string): Promise<{
             { maxRetries: 2 }
         )
 
+        // Fetch user's primary email for contribution graph attribution
+        let primaryEmail: string | null = null
+        try {
+            const { data: emails } = await userOctokit.users.listEmailsForAuthenticatedUser()
+            const primary = emails.find(e => e.primary && e.verified)
+            primaryEmail = primary?.email || null
+        } catch (emailError) {
+            // Email fetch might fail if user hasn't granted email scope - that's ok
+            console.warn('[GITHUB] Could not fetch user email:', emailError)
+        }
+
         return {
             accessToken: tokenResponse.access_token,
             user: {
                 id: user.id,
                 login: user.login,
                 avatar_url: user.avatar_url,
+                name: user.name || user.login,
+                email: primaryEmail,
             },
         }
     } catch (error) {
@@ -571,13 +586,15 @@ export function toggleReadmeWhitespace(content: string): string {
 
 /**
  * Commit the updated README
+ * If author is provided, the commit will be attributed to them (counts for contribution graph)
  */
 export async function commitReadmeUpdate(
     octokit: Octokit,
     owner: string,
     repo: string,
     newContent: string,
-    oldSha: string
+    oldSha: string,
+    author?: { name: string; email: string }
 ): Promise<string> {
     const { owner: validOwner, repo: validRepo } = validateRepoName(`${owner}/${repo}`)
 
@@ -610,6 +627,17 @@ export async function commitReadmeUpdate(
                 message,
                 content: Buffer.from(newContent).toString('base64'),
                 sha: oldSha,
+                // If author is provided, attribute the commit to them
+                ...(author && {
+                    author: {
+                        name: author.name,
+                        email: author.email,
+                    },
+                    committer: {
+                        name: author.name,
+                        email: author.email,
+                    },
+                }),
             }),
             {
                 maxRetries: 2,

@@ -92,6 +92,7 @@ async function processInstallation(
         repoFullName: string
         commitsToday: number
         lastRunAt: Date | null
+        user: { name: string | null; email: string | null }
     },
     today: Date
 ): Promise<ProcessingResult> {
@@ -168,13 +169,20 @@ async function processInstallation(
         // Toggle whitespace in README
         const newContent = toggleReadmeWhitespace(readme.content)
 
-        // Commit the change
+        // Get author info - use user's email for contribution graph
+        // GitHub requires the email to be verified on their account
+        const author = installation.user.email && installation.user.name
+            ? { name: installation.user.name, email: installation.user.email }
+            : undefined
+
+        // Commit the change with user attribution
         const commitSha = await commitReadmeUpdate(
             octokit,
             owner,
             repo,
             newContent,
-            readme.sha
+            readme.sha,
+            author
         )
 
         // Update installation record
@@ -283,11 +291,14 @@ export async function GET(request: NextRequest) {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
-        // Get all active installations
+        // Get all active installations with user info for commit attribution
         let installations
         try {
             installations = await prisma.installation.findMany({
                 where: { active: true },
+                include: {
+                    user: { select: { name: true, email: true } },
+                },
             })
         } catch (dbError) {
             logError(dbError, { action: 'fetch installations' })

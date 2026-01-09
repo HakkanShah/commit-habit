@@ -145,7 +145,8 @@ export async function GET(request: NextRequest) {
                 await prisma.user.update({
                     where: { id: existingAccount.userId },
                     data: {
-                        name: user.login,
+                        name: user.name,
+                        email: user.email,
                         avatarUrl: user.avatar_url,
                     },
                 })
@@ -165,7 +166,8 @@ export async function GET(request: NextRequest) {
             try {
                 const newUser = await prisma.user.create({
                     data: {
-                        name: user.login,
+                        name: user.name,
+                        email: user.email,
                         avatarUrl: user.avatar_url,
                         accounts: {
                             create: {

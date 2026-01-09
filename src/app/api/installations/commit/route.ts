@@ -50,9 +50,12 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Get installation and verify ownership
+        // Get installation and verify ownership, include user for commit attribution
         const installation = await prisma.installation.findUnique({
             where: { id: installationId },
+            include: {
+                user: { select: { name: true, email: true } },
+            },
         })
 
         if (!installation) {
@@ -95,13 +98,19 @@ export async function POST(request: NextRequest) {
         // Toggle whitespace in README
         const newContent = toggleReadmeWhitespace(readme.content)
 
-        // Commit the change
+        // Get author info for contribution graph attribution
+        const author = installation.user.email && installation.user.name
+            ? { name: installation.user.name, email: installation.user.email }
+            : undefined
+
+        // Commit the change with user attribution
         const commitSha = await commitReadmeUpdate(
             octokit,
             owner,
             repo,
             newContent,
-            readme.sha
+            readme.sha,
+            author
         )
 
         // Update installation record
