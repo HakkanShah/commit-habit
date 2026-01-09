@@ -174,25 +174,43 @@ async function findOrCreateGitHubUser(sender: GitHubSender) {
 
 /**
  * Create or update installation record
+ * Returns 'created' if new, 'reactivated' if was inactive, 'exists' if already active
  */
 async function upsertInstallation(
     installationId: number,
     userId: string,
     repo: GitHubRepository
-): Promise<void> {
+): Promise<'created' | 'reactivated' | 'exists'> {
     try {
-        await prisma.installation.upsert({
+        // Check if installation already exists
+        const existing = await prisma.installation.findUnique({
             where: {
                 installationId_repoId: {
                     installationId,
                     repoId: repo.id,
                 },
             },
-            update: {
-                repoFullName: repo.full_name,
-                active: true,
-            },
-            create: {
+        })
+
+        if (existing) {
+            if (existing.active) {
+                // Already exists and active - just log it
+                console.log(`[WEBHOOK] Repo ${repo.full_name} already added and active`)
+                return 'exists'
+            } else {
+                // Exists but inactive - reactivate it
+                await prisma.installation.update({
+                    where: { id: existing.id },
+                    data: { active: true, repoFullName: repo.full_name },
+                })
+                console.log(`[WEBHOOK] Reactivated repo ${repo.full_name}`)
+                return 'reactivated'
+            }
+        }
+
+        // Create new installation
+        await prisma.installation.create({
+            data: {
                 installationId,
                 userId,
                 repoFullName: repo.full_name,
@@ -200,6 +218,7 @@ async function upsertInstallation(
                 active: true,
             },
         })
+        return 'created'
     } catch (error) {
         logError(error, {
             action: 'upsert installation',
@@ -225,10 +244,35 @@ async function handleInstallationEvent(data: InstallationEventPayload): Promise<
             const user = await findOrCreateGitHubUser(sender)
 
             if (repositories && repositories.length > 0) {
+                let newCount = 0
+                let existingCount = 0
+                let reactivatedCount = 0
+                let failCount = 0
+
                 for (const repo of repositories) {
-                    await upsertInstallation(installation.id, user.id, repo)
+                    try {
+                        const result = await upsertInstallation(installation.id, user.id, repo)
+                        if (result === 'created') newCount++
+                        else if (result === 'reactivated') reactivatedCount++
+                        else existingCount++
+                    } catch (error) {
+                        failCount++
+                        logError(error, {
+                            action: 'add repository in batch',
+                            repo: repo.full_name,
+                            installationId: installation.id,
+                        })
+                        // Continue processing other repos
+                    }
                 }
-                console.log(`[WEBHOOK] Created ${repositories.length} installation(s) for user ${user.id}`)
+
+                const parts = []
+                if (newCount > 0) parts.push(`${newCount} new`)
+                if (reactivatedCount > 0) parts.push(`${reactivatedCount} reactivated`)
+                if (existingCount > 0) parts.push(`${existingCount} already existed`)
+                if (failCount > 0) parts.push(`${failCount} failed`)
+
+                console.log(`[WEBHOOK] Processed ${repositories.length} repos for user ${user.id}: ${parts.join(', ')}`)
             } else {
                 console.log('[WEBHOOK] Installation created with no repositories')
             }
@@ -302,17 +346,42 @@ async function handleInstallationRepositoriesEvent(data: InstallationRepositorie
     if (action === 'added' && repositories_added && repositories_added.length > 0) {
         const user = await findOrCreateGitHubUser(sender)
 
+        let newCount = 0
+        let existingCount = 0
+        let reactivatedCount = 0
+        let failCount = 0
+
         for (const repo of repositories_added) {
-            await upsertInstallation(installation.id, user.id, repo)
+            try {
+                const result = await upsertInstallation(installation.id, user.id, repo)
+                if (result === 'created') newCount++
+                else if (result === 'reactivated') reactivatedCount++
+                else existingCount++
+            } catch (error) {
+                failCount++
+                logError(error, {
+                    action: 'add repository',
+                    repo: repo.full_name,
+                    installationId: installation.id,
+                })
+            }
         }
 
-        console.log(`[WEBHOOK] Added ${repositories_added.length} repository(ies): ${repositories_added.map(r => r.full_name).join(', ')}`)
+        const parts = []
+        if (newCount > 0) parts.push(`${newCount} new`)
+        if (reactivatedCount > 0) parts.push(`${reactivatedCount} reactivated`)
+        if (existingCount > 0) parts.push(`${existingCount} already existed`)
+        if (failCount > 0) parts.push(`${failCount} failed`)
+
+        console.log(`[WEBHOOK] Processed repos: ${parts.join(', ')}`)
     }
 
     if (action === 'removed' && repositories_removed && repositories_removed.length > 0) {
-        try {
-            // Deactivate instead of delete to preserve history
-            for (const repo of repositories_removed) {
+        let successCount = 0
+        let failCount = 0
+
+        for (const repo of repositories_removed) {
+            try {
                 await prisma.installation.updateMany({
                     where: {
                         installationId: installation.id,
@@ -320,16 +389,22 @@ async function handleInstallationRepositoriesEvent(data: InstallationRepositorie
                     },
                     data: { active: false },
                 })
+                successCount++
+            } catch (error) {
+                failCount++
+                logError(error, {
+                    action: 'remove repository',
+                    repo: repo.full_name,
+                    installationId: installation.id,
+                })
+                // Continue processing other repos
             }
+        }
 
-            console.log(`[WEBHOOK] Removed ${repositories_removed.length} repository(ies): ${repositories_removed.map(r => r.full_name).join(', ')}`)
-        } catch (error) {
-            logError(error, {
-                action: 'remove repositories',
-                installationId: installation.id,
-                repos: repositories_removed.map(r => r.full_name),
-            })
-            throw DatabaseError.queryError('remove repositories', {}, error instanceof Error ? error : undefined)
+        if (failCount > 0) {
+            console.warn(`[WEBHOOK] Removed ${successCount}/${repositories_removed.length} repos, ${failCount} failed`)
+        } else {
+            console.log(`[WEBHOOK] Removed ${successCount} repository(ies): ${repositories_removed.map(r => r.full_name).join(', ')}`)
         }
     }
 }
