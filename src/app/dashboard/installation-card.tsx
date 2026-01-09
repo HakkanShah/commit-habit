@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Pause, Play, Loader2, GitCommit, Trash2, MoreVertical, X, ExternalLink, Clock } from 'lucide-react'
+import { Pause, Play, Loader2, GitCommit, Trash2, MoreVertical, X, ExternalLink, Clock, Zap } from 'lucide-react'
 import { useToast } from '@/components/toast'
 
 interface ActivityLog {
@@ -25,11 +25,13 @@ interface Installation {
 interface InstallationCardProps {
     installation: Installation
     isLoading?: boolean
+    isCommitting?: boolean
     onToggle: () => void
     onRemove: () => void
+    onCommit: () => void
 }
 
-export function InstallationCard({ installation, isLoading = false, onToggle, onRemove }: InstallationCardProps) {
+export function InstallationCard({ installation, isLoading = false, isCommitting = false, onToggle, onRemove, onCommit }: InstallationCardProps) {
     const [showConfirm, setShowConfirm] = useState(false)
     const [showMenu, setShowMenu] = useState(false)
     const { error: showError } = useToast()
@@ -126,9 +128,28 @@ export function InstallationCard({ installation, isLoading = false, onToggle, on
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2">
+                    {/* Commit Now Button - Primary Action */}
+                    <button
+                        onClick={() => { setShowMenu(false); onCommit() }}
+                        disabled={isLoading || isCommitting || !installation.active}
+                        title={!installation.active ? 'Resume automation to commit' : 'Create commit now'}
+                        className={`hidden sm:flex items-center gap-2 px-3 h-10 rounded-xl font-medium text-sm transition-all active:scale-95 ${installation.active
+                            ? 'bg-gradient-to-r from-[#58a6ff] to-[#388bfd] text-white hover:shadow-lg hover:shadow-[#58a6ff]/20'
+                            : 'bg-[#21262d] text-[#8b949e] cursor-not-allowed'
+                            }`}
+                    >
+                        {isCommitting ? (
+                            <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                            <Zap size={14} />
+                        )}
+                        <span>{isCommitting ? 'Committing...' : 'Commit'}</span>
+                    </button>
+
+                    {/* Toggle Button */}
                     <button
                         onClick={onToggle}
-                        disabled={isLoading}
+                        disabled={isLoading || isCommitting}
                         title={installation.active ? 'Pause automation' : 'Resume automation'}
                         className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-95 ${installation.active
                             ? 'bg-[#21262d] text-[#8b949e] hover:text-white hover:bg-[#30363d]'
@@ -142,7 +163,7 @@ export function InstallationCard({ installation, isLoading = false, onToggle, on
                     <div className="relative">
                         <button
                             onClick={() => setShowMenu(!showMenu)}
-                            disabled={isLoading}
+                            disabled={isLoading || isCommitting}
                             className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#21262d] text-[#8b949e] hover:text-white hover:bg-[#30363d] transition-all active:scale-95"
                         >
                             <MoreVertical size={16} />
@@ -151,6 +172,19 @@ export function InstallationCard({ installation, isLoading = false, onToggle, on
                         {/* Dropdown Menu - positioned relative to button */}
                         {showMenu && (
                             <div className="absolute right-0 top-12 z-50 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl overflow-hidden min-w-[180px]">
+                                {/* Commit Now - shown on mobile */}
+                                <button
+                                    onClick={() => { setShowMenu(false); onCommit() }}
+                                    disabled={isCommitting || !installation.active}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors ${installation.active
+                                            ? 'text-[#58a6ff] hover:bg-[#58a6ff]/10'
+                                            : 'text-[#8b949e] cursor-not-allowed'
+                                        }`}
+                                >
+                                    {isCommitting ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                                    <span>{isCommitting ? 'Committing...' : 'Commit Now'}</span>
+                                </button>
+                                <div className="border-t border-[#30363d]" />
                                 <button
                                     onClick={() => { setShowMenu(false); onToggle() }}
                                     disabled={isLoading}

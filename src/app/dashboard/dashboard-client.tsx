@@ -47,10 +47,18 @@ interface DeleteResponse {
     message?: string
 }
 
+interface CommitResponse {
+    success: boolean
+    commitSha?: string
+    message?: string
+    error?: string
+}
+
 export function DashboardClient({ user, displayName, githubAppUrl, initialInstallations }: DashboardProps) {
     // State for all installations - enables optimistic updates
     const [installations, setInstallations] = useState<Installation[]>(initialInstallations)
     const [pendingActions, setPendingActions] = useState<Set<string>>(new Set())
+    const [committingRepos, setCommittingRepos] = useState<Set<string>>(new Set())
     const { success, error: showError, warning } = useToast()
 
     // Computed values that update instantly
@@ -130,6 +138,53 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
 
         success('Repository removed')
     }, [installations, pendingActions, showError, success])
+
+    // Manual commit with optimistic UI
+    const handleCommit = useCallback(async (installationId: string) => {
+        const installation = installations.find(i => i.id === installationId)
+        if (!installation || committingRepos.has(installationId)) return
+
+        if (!installation.active) {
+            showError('Resume automation first to commit')
+            return
+        }
+
+        const previousCommitsToday = installation.commitsToday
+
+        // Optimistic update - increment commits immediately
+        setInstallations(prev =>
+            prev.map(i => i.id === installationId ? {
+                ...i,
+                commitsToday: i.commitsToday + 1,
+                lastRunAt: new Date().toISOString()
+            } : i)
+        )
+        setCommittingRepos(prev => new Set(prev).add(installationId))
+
+        // API call
+        const result = await apiFetch<CommitResponse>('/api/installations/commit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ installationId }),
+        })
+
+        setCommittingRepos(prev => {
+            const next = new Set(prev)
+            next.delete(installationId)
+            return next
+        })
+
+        if (result.error || !result.data?.success) {
+            // Rollback on error
+            setInstallations(prev =>
+                prev.map(i => i.id === installationId ? { ...i, commitsToday: previousCommitsToday } : i)
+            )
+            showError(result.error?.message || result.data?.error || 'Failed to create commit')
+            return
+        }
+
+        success(`Commit created: ${result.data.commitSha}`)
+    }, [installations, committingRepos, showError, success])
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#161b22] to-[#0d1117] text-white">
@@ -269,8 +324,10 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                     key={inst.id}
                                     installation={inst}
                                     isLoading={pendingActions.has(inst.id)}
+                                    isCommitting={committingRepos.has(inst.id)}
                                     onToggle={() => handleToggle(inst.id)}
                                     onRemove={() => handleRemove(inst.id)}
+                                    onCommit={() => handleCommit(inst.id)}
                                 />
                             ))}
                         </div>
