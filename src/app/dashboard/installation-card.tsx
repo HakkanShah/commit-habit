@@ -68,8 +68,8 @@ export function InstallationCard({ installation, isLoading = false, onToggle, on
             <div className={`group flex items-center gap-4 p-4 sm:p-5 transition-all hover:bg-white/[0.02] ${isLoading ? 'opacity-60' : ''}`}>
                 {/* Status Icon with animation */}
                 <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${installation.active
-                        ? 'bg-gradient-to-br from-[#39d353]/20 to-[#238636]/20 text-[#39d353]'
-                        : 'bg-[#21262d] text-[#8b949e]'
+                    ? 'bg-gradient-to-br from-[#39d353]/20 to-[#238636]/20 text-[#39d353]'
+                    : 'bg-[#21262d] text-[#8b949e]'
                     }`}>
                     {isLoading ? (
                         <Loader2 size={20} className="animate-spin" />
@@ -131,52 +131,56 @@ export function InstallationCard({ installation, isLoading = false, onToggle, on
                         disabled={isLoading}
                         title={installation.active ? 'Pause automation' : 'Resume automation'}
                         className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all active:scale-95 ${installation.active
-                                ? 'bg-[#21262d] text-[#8b949e] hover:text-white hover:bg-[#30363d]'
-                                : 'bg-[#39d353]/10 text-[#39d353] hover:bg-[#39d353]/20'
+                            ? 'bg-[#21262d] text-[#8b949e] hover:text-white hover:bg-[#30363d]'
+                            : 'bg-[#39d353]/10 text-[#39d353] hover:bg-[#39d353]/20'
                             }`}
                     >
                         {installation.active ? <Pause size={16} /> : <Play size={16} />}
                     </button>
 
-                    <button
-                        onClick={() => setShowMenu(!showMenu)}
-                        disabled={isLoading}
-                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#21262d] text-[#8b949e] hover:text-white hover:bg-[#30363d] transition-all active:scale-95"
-                    >
-                        <MoreVertical size={16} />
-                    </button>
-                </div>
-
-                {/* Dropdown Menu */}
-                {showMenu && (
-                    <div className="absolute right-4 sm:right-8 top-full mt-1 z-20 bg-[#161b22] border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[160px] animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* Menu Button with Dropdown */}
+                    <div className="relative">
                         <button
-                            onClick={() => { setShowMenu(false); onToggle() }}
+                            onClick={() => setShowMenu(!showMenu)}
                             disabled={isLoading}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-white/5 transition-colors"
+                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#21262d] text-[#8b949e] hover:text-white hover:bg-[#30363d] transition-all active:scale-95"
                         >
-                            {installation.active ? <Pause size={14} /> : <Play size={14} />}
-                            <span>{installation.active ? 'Pause' : 'Resume'}</span>
+                            <MoreVertical size={16} />
                         </button>
-                        <a
-                            href={`https://github.com/${installation.repoFullName}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left hover:bg-white/5 transition-colors"
-                        >
-                            <ExternalLink size={14} />
-                            <span>Open on GitHub</span>
-                        </a>
-                        <div className="border-t border-white/5" />
-                        <button
-                            onClick={handleRemoveClick}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
-                        >
-                            <Trash2 size={14} />
-                            <span>Remove</span>
-                        </button>
+
+                        {/* Dropdown Menu - positioned relative to button */}
+                        {showMenu && (
+                            <div className="absolute right-0 top-12 z-50 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl overflow-hidden min-w-[180px]">
+                                <button
+                                    onClick={() => { setShowMenu(false); onToggle() }}
+                                    disabled={isLoading}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left text-white hover:bg-white/5 transition-colors"
+                                >
+                                    {installation.active ? <Pause size={14} /> : <Play size={14} />}
+                                    <span>{installation.active ? 'Pause' : 'Resume'}</span>
+                                </button>
+                                <a
+                                    href={`https://github.com/${installation.repoFullName}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    onClick={() => setShowMenu(false)}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left text-white hover:bg-white/5 transition-colors"
+                                >
+                                    <ExternalLink size={14} />
+                                    <span>Open on GitHub</span>
+                                </a>
+                                <div className="border-t border-[#30363d]" />
+                                <button
+                                    onClick={handleRemoveClick}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-left text-[#f85149] hover:bg-[#f85149]/10 transition-colors"
+                                >
+                                    <Trash2 size={14} />
+                                    <span>Remove</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
 
             {/* Click outside to close menu */}

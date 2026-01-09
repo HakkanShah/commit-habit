@@ -108,7 +108,7 @@ function ToastContainer({
     if (toasts.length === 0) return null
 
     return (
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-[100] flex flex-col gap-3 sm:max-w-sm sm:w-full">
             {toasts.map(toast => (
                 <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
             ))}
@@ -127,44 +127,61 @@ function ToastItem({
     toast: Toast
     onDismiss: (id: string) => void
 }) {
-    const icons = {
-        success: <CheckCircle size={18} className="text-[var(--accent)]" />,
-        error: <XCircle size={18} className="text-[var(--danger)]" />,
-        warning: <AlertCircle size={18} className="text-[var(--warning)]" />,
-        info: <Info size={18} className="text-[var(--primary)]" />,
+    const styles = {
+        success: {
+            bg: 'bg-[#0d1117]',
+            border: 'border-[#238636]',
+            icon: <CheckCircle size={20} className="text-[#3fb950]" />,
+            accent: 'bg-[#238636]',
+        },
+        error: {
+            bg: 'bg-[#0d1117]',
+            border: 'border-[#f85149]',
+            icon: <XCircle size={20} className="text-[#f85149]" />,
+            accent: 'bg-[#da3633]',
+        },
+        warning: {
+            bg: 'bg-[#0d1117]',
+            border: 'border-[#d29922]',
+            icon: <AlertCircle size={20} className="text-[#d29922]" />,
+            accent: 'bg-[#9e6a03]',
+        },
+        info: {
+            bg: 'bg-[#0d1117]',
+            border: 'border-[#58a6ff]',
+            icon: <Info size={20} className="text-[#58a6ff]" />,
+            accent: 'bg-[#1f6feb]',
+        },
     }
 
-    const bgColors = {
-        success: 'bg-[var(--accent)]/10 border-[var(--accent)]/30',
-        error: 'bg-[var(--danger)]/10 border-[var(--danger)]/30',
-        warning: 'bg-[var(--warning)]/10 border-[var(--warning)]/30',
-        info: 'bg-[var(--primary)]/10 border-[var(--primary)]/30',
-    }
+    const style = styles[toast.type]
 
     return (
         <div
             className={`
-                pointer-events-auto
-                ${bgColors[toast.type]}
-                border rounded-lg p-4 shadow-lg
-                bg-[var(--card)] backdrop-blur-sm
-                animate-slide-in-right
+                ${style.bg} ${style.border}
+                border-2 rounded-xl p-4 shadow-2xl
+                animate-in slide-in-from-bottom-4 fade-in duration-300
+                relative overflow-hidden
             `}
             role="alert"
         >
-            <div className="flex items-start gap-3">
+            {/* Accent bar on left */}
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${style.accent}`} />
+
+            <div className="flex items-start gap-3 pl-2">
                 <div className="flex-shrink-0 mt-0.5">
-                    {icons[toast.type]}
+                    {style.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm">{toast.title}</p>
+                    <p className="font-semibold text-white text-sm">{toast.title}</p>
                     {toast.message && (
-                        <p className="text-sm text-[var(--muted)] mt-1">{toast.message}</p>
+                        <p className="text-sm text-[#8b949e] mt-1">{toast.message}</p>
                     )}
                     {toast.action && (
                         <button
                             onClick={toast.action.onClick}
-                            className="text-sm font-medium text-[var(--primary)] hover:underline mt-2"
+                            className="text-sm font-medium text-[#58a6ff] hover:underline mt-2"
                         >
                             {toast.action.label}
                         </button>
@@ -172,12 +189,13 @@ function ToastItem({
                 </div>
                 <button
                     onClick={() => onDismiss(toast.id)}
-                    className="flex-shrink-0 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+                    className="flex-shrink-0 text-[#8b949e] hover:text-white transition-colors p-1 -m-1 rounded-lg hover:bg-white/10"
                     aria-label="Dismiss"
                 >
-                    <X size={16} />
+                    <X size={18} />
                 </button>
             </div>
         </div>
     )
 }
+
