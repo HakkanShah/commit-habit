@@ -13,6 +13,15 @@ html::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

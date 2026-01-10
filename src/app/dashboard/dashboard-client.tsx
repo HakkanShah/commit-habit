@@ -187,38 +187,50 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
     }, [installations, committingRepos, showError, success])
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#161b22] to-[#0d1117] text-white">
-            {/* Animated background gradient */}
+        <div className="min-h-screen bg-[#0d1117] text-white">
+            {/* Subtle background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#39d353]/10 rounded-full blur-3xl animate-pulse" />
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-[#238636]/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#39d353]/5 rounded-full blur-[120px]" />
             </div>
 
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-[#0d1117]/80 backdrop-blur-xl border-b border-white/5">
-                <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
-                    <Link href="/" className="flex items-center gap-3 group">
+            {/* Header - Redesigned */}
+            <header className="sticky top-0 z-50 bg-[#0d1117]/90 backdrop-blur-xl border-b border-white/5">
+                <div className="max-w-5xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
+                    <Link href="/" className="flex items-center gap-2 group">
                         <img
                             src="/logo.png"
                             alt="Commit Habit"
-                            className="w-10 h-10 object-contain transition-transform group-hover:scale-110"
-                            style={{ filter: "drop-shadow(0 0 10px rgba(57,211,83,0.3))" }}
+                            className="w-8 h-8 sm:w-9 sm:h-9 object-contain transition-transform group-hover:scale-110 group-hover:rotate-6"
+                            style={{ filter: "drop-shadow(0 0 8px rgba(57,211,83,0.4))" }}
                         />
-                        <span className="font-bold text-lg hidden sm:inline bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
-                            Commit Habit
+                        <span className="font-bold text-base sm:text-lg">
+                            <span className="text-white">C</span>
+                            <span className="text-[#39d353]">o</span>
+                            <span className="text-white">mmit </span>
+                            <span className="text-[#39d353]">Habit</span>
                         </span>
                     </Link>
-                    <div className="flex items-center gap-4">
+
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <a
+                            href={githubAppUrl}
+                            className="hidden sm:inline-flex items-center gap-2 bg-[#238636] hover:bg-[#2ea043] px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        >
+                            <Plus size={16} />
+                            <span>Add Repo</span>
+                        </a>
+
                         {user.avatarUrl && (
                             <div className="relative">
                                 <img
                                     src={user.avatarUrl}
-                                    alt=""
-                                    className="w-9 h-9 rounded-full ring-2 ring-white/10 hover:ring-[#39d353]/50 transition-all"
+                                    alt={displayName}
+                                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full ring-2 ring-white/10 hover:ring-[#39d353]/50 transition-all cursor-pointer"
                                 />
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#39d353] rounded-full border-2 border-[#0d1117]" />
+                                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#39d353] rounded-full border-2 border-[#0d1117]" />
                             </div>
                         )}
+
                         <a
                             href="/api/auth/logout"
                             className="text-[#8b949e] hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all"
@@ -230,66 +242,94 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                 </div>
             </header>
 
-            <main className="relative px-4 py-8 max-w-4xl mx-auto">
-                {/* Welcome Section */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                    <div>
-                        <h1 className="text-2xl sm:text-3xl font-bold mb-1">
-                            Welcome back, <span className="bg-gradient-to-r from-[#39d353] to-[#58a6ff] bg-clip-text text-transparent">{displayName.split(' ')[0]}</span>!
-                        </h1>
-                        <p className="text-[#8b949e]">Manage your automated commit habits</p>
+            <main className="relative max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+                {/* Hero Welcome Card */}
+                <div className="relative bg-gradient-to-br from-[#161b22] via-[#1c2128] to-[#161b22] border border-white/5 rounded-2xl p-5 sm:p-6 mb-6 overflow-hidden">
+                    {/* Decorative glow */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#39d353]/10 rounded-full blur-3xl" />
+
+                    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            {user.avatarUrl && (
+                                <img
+                                    src={user.avatarUrl}
+                                    alt=""
+                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ring-2 ring-white/10 shadow-xl hidden sm:block"
+                                />
+                            )}
+                            <div>
+                                <p className="text-[#8b949e] text-sm mb-1">Welcome back,</p>
+                                <h1 className="text-xl sm:text-2xl font-bold">
+                                    <span className="bg-gradient-to-r from-white via-white to-[#39d353] bg-clip-text text-transparent">
+                                        {displayName.split(' ')[0]}
+                                    </span>
+                                    <span className="ml-2 text-2xl">👋</span>
+                                </h1>
+                                <p className="text-[#8b949e] text-sm mt-1 hidden sm:block">
+                                    Manage your automated commit streak
+                                </p>
+                            </div>
+                        </div>
+
+                        <a
+                            href={githubAppUrl}
+                            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] px-5 py-3 rounded-xl text-sm font-bold shadow-lg shadow-[#238636]/20 hover:shadow-[#238636]/40 transition-all hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto"
+                        >
+                            <Plus size={18} />
+                            <span>Add Repository</span>
+                        </a>
                     </div>
-                    <a
-                        href={githubAppUrl}
-                        className="inline-flex items-center gap-2 bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#238636] px-5 py-3 rounded-xl text-sm font-bold shadow-lg shadow-[#238636]/20 hover:shadow-[#238636]/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                        <Plus size={18} />
-                        <span>Add Repository</span>
-                    </a>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <div className="group bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-2xl p-5 hover:border-[#39d353]/30 transition-all hover:shadow-lg hover:shadow-[#39d353]/5">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#39d353]/10 flex items-center justify-center">
-                                <Github size={18} className="text-[#39d353]" />
+                {/* Stats Cards - Horizontal scroll on mobile */}
+                <div className="mb-6">
+                    <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 sm:gap-4 scrollbar-hide">
+                        {/* Total Repos */}
+                        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#8b949e]/30 transition-all">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-[#8b949e]/10 flex items-center justify-center">
+                                    <Github size={14} className="text-[#8b949e]" />
+                                </div>
+                                <p className="text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Repos</p>
                             </div>
+                            <p className="text-2xl sm:text-3xl font-bold tabular-nums">{totalCount}</p>
                         </div>
-                        <p className="text-xs text-[#8b949e] mb-1">Total Repos</p>
-                        <p className="text-3xl font-bold tabular-nums">{totalCount}</p>
-                    </div>
 
-                    <div className="group bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-2xl p-5 hover:border-[#39d353]/30 transition-all hover:shadow-lg hover:shadow-[#39d353]/5">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#39d353]/10 flex items-center justify-center">
-                                <Zap size={18} className="text-[#39d353]" />
+                        {/* Active */}
+                        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#39d353]/30 transition-all">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-[#39d353]/10 flex items-center justify-center">
+                                    <Zap size={14} className="text-[#39d353]" />
+                                </div>
+                                <p className="text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Active</p>
                             </div>
+                            <p className="text-2xl sm:text-3xl font-bold text-[#39d353] tabular-nums">{activeCount}</p>
                         </div>
-                        <p className="text-xs text-[#8b949e] mb-1">Active</p>
-                        <p className="text-3xl font-bold text-[#39d353] tabular-nums">{activeCount}</p>
-                    </div>
 
-                    <div className="group bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-2xl p-5 hover:border-[#d29922]/30 transition-all hover:shadow-lg hover:shadow-[#d29922]/5">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#d29922]/10 flex items-center justify-center">
-                                <Activity size={18} className="text-[#d29922]" />
+                        {/* Paused */}
+                        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#d29922]/30 transition-all">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-[#d29922]/10 flex items-center justify-center">
+                                    <Activity size={14} className="text-[#d29922]" />
+                                </div>
+                                <p className="text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Paused</p>
                             </div>
+                            <p className="text-2xl sm:text-3xl font-bold text-[#d29922] tabular-nums">{totalCount - activeCount}</p>
                         </div>
-                        <p className="text-xs text-[#8b949e] mb-1">Paused</p>
-                        <p className="text-3xl font-bold text-[#d29922] tabular-nums">{totalCount - activeCount}</p>
-                    </div>
 
-                    <div className="group bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-2xl p-5 hover:border-[#58a6ff]/30 transition-all hover:shadow-lg hover:shadow-[#58a6ff]/5">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#58a6ff]/10 flex items-center justify-center">
-                                <TrendingUp size={18} className="text-[#58a6ff]" />
+                        {/* Today's Commits */}
+                        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#58a6ff]/30 transition-all">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 rounded-lg bg-[#58a6ff]/10 flex items-center justify-center">
+                                    <TrendingUp size={14} className="text-[#58a6ff]" />
+                                </div>
+                                <p className="text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Today</p>
                             </div>
+                            <p className="text-2xl sm:text-3xl font-bold text-[#58a6ff] tabular-nums">
+                                {installations.reduce((sum, i) => sum + i.commitsToday, 0)}
+                            </p>
                         </div>
-                        <p className="text-xs text-[#8b949e] mb-1">Today&apos;s Commits</p>
-                        <p className="text-3xl font-bold text-[#58a6ff] tabular-nums">
-                            {installations.reduce((sum, i) => sum + i.commitsToday, 0)}
-                        </p>
                     </div>
                 </div>
 

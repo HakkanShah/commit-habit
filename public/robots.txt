@@ -1,0 +1,11 @@
+# Robots.txt for Commit Habit
+# https://commithabit.vercel.app
+
+User-agent: *
+Allow: /
+
+# Disallow API routes from being indexed
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://commithabit.vercel.app/sitemap.xml
