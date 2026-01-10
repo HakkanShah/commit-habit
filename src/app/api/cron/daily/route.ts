@@ -92,7 +92,10 @@ async function processInstallation(
         repoFullName: string
         commitsToday: number
         lastRunAt: Date | null
-        user: { name: string | null; email: string | null }
+        user: {
+            name: string | null
+            accounts: { provider: string; providerAccountId: string; providerUsername: string | null }[]
+        }
     },
     today: Date
 ): Promise<ProcessingResult> {
@@ -169,10 +172,15 @@ async function processInstallation(
         // Toggle whitespace in README
         const newContent = toggleReadmeWhitespace(readme.content)
 
-        // Get author info - use user's email for contribution graph
-        // GitHub requires the email to be verified on their account
-        const author = installation.user.email && installation.user.name
-            ? { name: installation.user.name, email: installation.user.email }
+        // Get author info using GitHub's noreply email format
+        // Format: ID+USERNAME@users.noreply.github.com
+        // This is guaranteed to show on the user's contribution graph
+        const githubAccount = installation.user.accounts.find(a => a.provider === 'github')
+        const author = githubAccount && githubAccount.providerUsername
+            ? {
+                name: installation.user.name || githubAccount.providerUsername,
+                email: `${githubAccount.providerAccountId}+${githubAccount.providerUsername}@users.noreply.github.com`
+            }
             : undefined
 
         // Commit the change with user attribution
@@ -291,13 +299,21 @@ export async function GET(request: NextRequest) {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
 
-        // Get all active installations with user info for commit attribution
+        // Get all active installations with user and GitHub account info for commit attribution
         let installations
         try {
             installations = await prisma.installation.findMany({
                 where: { active: true },
                 include: {
-                    user: { select: { name: true, email: true } },
+                    user: {
+                        select: {
+                            name: true,
+                            accounts: {
+                                where: { provider: 'github' },
+                                select: { provider: true, providerAccountId: true, providerUsername: true }
+                            }
+                        }
+                    },
                 },
             })
         } catch (dbError) {

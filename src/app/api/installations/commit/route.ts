@@ -54,7 +54,15 @@ export async function POST(request: NextRequest) {
         const installation = await prisma.installation.findUnique({
             where: { id: installationId },
             include: {
-                user: { select: { name: true, email: true } },
+                user: {
+                    select: {
+                        name: true,
+                        accounts: {
+                            where: { provider: 'github' },
+                            select: { provider: true, providerAccountId: true, providerUsername: true }
+                        }
+                    }
+                },
             },
         })
 
@@ -98,9 +106,15 @@ export async function POST(request: NextRequest) {
         // Toggle whitespace in README
         const newContent = toggleReadmeWhitespace(readme.content)
 
-        // Get author info for contribution graph attribution
-        const author = installation.user.email && installation.user.name
-            ? { name: installation.user.name, email: installation.user.email }
+        // Get author info using GitHub's noreply email format
+        // Format: ID+USERNAME@users.noreply.github.com
+        // This is guaranteed to show on the user's contribution graph
+        const githubAccount = installation.user.accounts.find(a => a.provider === 'github')
+        const author = githubAccount && githubAccount.providerUsername
+            ? {
+                name: installation.user.name || githubAccount.providerUsername,
+                email: `${githubAccount.providerAccountId}+${githubAccount.providerUsername}@users.noreply.github.com`
+            }
             : undefined
 
         // Commit the change with user attribution
