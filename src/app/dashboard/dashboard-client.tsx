@@ -197,17 +197,17 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
             <header className="sticky top-0 z-50 bg-[#0d1117]/90 backdrop-blur-xl border-b border-white/5">
                 <div className="max-w-5xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
                     <Link href="/" className="flex items-center group">
-                        <span className="font-bold text-base sm:text-lg flex items-center">
+                        <span className="font-black text-xl sm:text-2xl flex items-center tracking-tight">
                             <span className="text-white">C</span>
                             <img
                                 src="/logo.png"
                                 alt="o"
-                                className="h-[0.85em] w-auto object-contain inline-block align-middle -mx-0.5 transition-transform group-hover:scale-110 group-hover:rotate-12"
-                                style={{ filter: "drop-shadow(0 0 8px rgba(57,211,83,0.4))" }}
+                                className="h-[0.95em] w-auto object-contain inline-block align-middle -mx-2 translate-y-[0.15em] transition-transform group-hover:scale-110 group-hover:rotate-12"
+                                style={{ filter: "drop-shadow(0 0 15px rgba(57,211,83,0.5))" }}
                             />
                             <span className="text-white">mmit</span>
                             <span className="mx-1">&nbsp;</span>
-                            <span className="text-[#39d353]">Habit</span>
+                            <span className="text-[#39d353] drop-shadow-[0_0_20px_rgba(57,211,83,0.3)]">Habit</span>
                         </span>
                     </Link>
 
