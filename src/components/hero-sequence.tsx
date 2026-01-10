@@ -48,15 +48,45 @@ export function HeroSequence() {
             {/* Main Content */}
             <div className="relative z-10 w-full max-w-5xl mx-auto px-4 py-12 flex flex-col items-center gap-12">
 
-                {/* Animated Title - Text Only */}
-                <motion.h1
+                {/* Animated Title with Logo as 'O' */}
+                <motion.div
                     initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
                     animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                     transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                    className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 whitespace-nowrap"
+                    className="flex items-center justify-center"
                 >
-                    <span className="inline-block">Commit</span> <span className="text-[#39d353] drop-shadow-[0_0_30px_rgba(57,211,83,0.3)]">Habit</span>
-                </motion.h1>
+                    <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 flex items-center">
+                        <span>C</span>
+                        <motion.img
+                            src="/logo.png"
+                            alt="o"
+                            className="h-[0.95em] w-auto object-contain inline-block align-middle -mx-2 translate-y-[0.15em]"
+                            initial={{ opacity: 0, scale: 0, rotate: -180 }}
+                            animate={{
+                                opacity: 1,
+                                scale: 1,
+                                rotate: 0
+                            }}
+                            transition={{
+                                duration: 0.8,
+                                delay: 0.3,
+                                type: "spring",
+                                stiffness: 200
+                            }}
+                            whileHover={{
+                                scale: 1.2,
+                                rotate: 360,
+                                filter: "drop-shadow(0 0 30px rgba(57,211,83,0.8))"
+                            }}
+                            style={{
+                                filter: "drop-shadow(0 0 15px rgba(57,211,83,0.5))"
+                            }}
+                        />
+                        <span>mmit</span>
+                        <span className="mx-1">&nbsp;</span>
+                        <span className="text-[#39d353] drop-shadow-[0_0_30px_rgba(57,211,83,0.3)]">Habit</span>
+                    </h1>
+                </motion.div>
 
                 {/* Contribution Demo */}
                 <motion.div

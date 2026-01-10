@@ -198,9 +198,12 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
             <header className="sticky top-0 z-50 bg-[#0d1117]/80 backdrop-blur-xl border-b border-white/5">
                 <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#39d353] to-[#238636] flex items-center justify-center shadow-lg shadow-[#39d353]/20 group-hover:shadow-[#39d353]/40 transition-shadow">
-                            <GitCommit size={18} className="text-white" />
-                        </div>
+                        <img
+                            src="/logo.png"
+                            alt="Commit Habit"
+                            className="w-10 h-10 object-contain transition-transform group-hover:scale-110"
+                            style={{ filter: "drop-shadow(0 0 10px rgba(57,211,83,0.3))" }}
+                        />
                         <span className="font-bold text-lg hidden sm:inline bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
                             Commit Habit
                         </span>

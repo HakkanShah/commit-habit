@@ -23,6 +23,11 @@ export const metadata: Metadata = {
     description: "Learn GitHub automation the safe and ethical way",
     type: "website",
   },
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/icon.png',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({
