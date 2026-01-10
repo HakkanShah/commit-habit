@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server'
 
+// Simple health check - no database, no auth
 export async function GET() {
     return NextResponse.json({
         status: 'ok',
-        time: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
         env: {
-            hasAppId: !!process.env.GITHUB_APP_ID,
-            hasPrivateKey: !!process.env.GITHUB_APP_PRIVATE_KEY,
-            hasClientId: !!process.env.GITHUB_APP_CLIENT_ID,
+            hasDatabase: !!process.env.DATABASE_URL,
+            hasGithubApp: !!process.env.GITHUB_APP_ID,
             hasCronSecret: !!process.env.CRON_SECRET,
-            hasDbUrl: !!process.env.DATABASE_URL,
+            hasSessionSecret: !!process.env.SESSION_SECRET,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL || 'NOT_SET',
         }
     })
 }
