@@ -318,7 +318,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                 {activeCount} of {totalCount} active
                             </span>
                         </div>
-                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-2xl divide-y divide-white/5">
                             {installations.map((inst) => (
                                 <InstallationCard
                                     key={inst.id}

@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Github, ChevronDown } from 'lucide-react'
+import { ArrowRight, Github, ChevronDown, LayoutDashboard } from 'lucide-react'
 import { ContributionDemo } from './contribution-demo'
 
 export function HeroSequence() {
     const [step, setStep] = useState(0)
+    const [isLoggedIn, setIsLoggedIn] = useState(false)
+    const [isCheckingSession, setIsCheckingSession] = useState(true)
 
     useEffect(() => {
         const timers = [
@@ -17,6 +19,24 @@ export function HeroSequence() {
             setTimeout(() => setStep(5), 5000),
         ]
         return () => timers.forEach(clearTimeout)
+    }, [])
+
+    // Check if user is logged in
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const res = await fetch('/api/auth/me')
+                if (res.ok) {
+                    const data = await res.json()
+                    setIsLoggedIn(!!data.user)
+                }
+            } catch {
+                // Ignore errors - user is not logged in
+            } finally {
+                setIsCheckingSession(false)
+            }
+        }
+        checkSession()
     }, [])
 
     return (
@@ -72,17 +92,31 @@ export function HeroSequence() {
                     transition={{ duration: 0.4, delay: 0.6 }}
                     className="w-full max-w-sm px-4 lg:px-0"
                 >
-                    <a
-                        href="/api/auth/github"
-                        className="group relative flex items-center justify-center gap-3 w-full bg-[#238636] hover:bg-[#2ea043] text-white py-4 px-6 rounded-xl font-bold text-lg transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(57,211,83,0.4)]"
-                    >
-                        <Github size={22} className="group-hover:rotate-12 transition-transform" />
-                        <span>Connect with GitHub</span>
-                        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-
-                        {/* Button Glow */}
-                        <div className="absolute inset-0 rounded-xl bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    </a>
+                    {isCheckingSession ? (
+                        <div className="h-[60px] flex items-center justify-center">
+                            <div className="w-6 h-6 border-2 border-[#39d353] border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    ) : isLoggedIn ? (
+                        <a
+                            href="/dashboard"
+                            className="group relative flex items-center justify-center gap-3 w-full bg-[#238636] hover:bg-[#2ea043] text-white py-4 px-6 rounded-xl font-bold text-lg transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(57,211,83,0.4)]"
+                        >
+                            <LayoutDashboard size={22} className="group-hover:rotate-12 transition-transform" />
+                            <span>Go to Dashboard</span>
+                            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                            <div className="absolute inset-0 rounded-xl bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </a>
+                    ) : (
+                        <a
+                            href="/api/auth/github"
+                            className="group relative flex items-center justify-center gap-3 w-full bg-[#238636] hover:bg-[#2ea043] text-white py-4 px-6 rounded-xl font-bold text-lg transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(57,211,83,0.4)]"
+                        >
+                            <Github size={22} className="group-hover:rotate-12 transition-transform" />
+                            <span>Connect with GitHub</span>
+                            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                            <div className="absolute inset-0 rounded-xl bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </a>
+                    )}
 
                     <motion.div
                         initial={{ opacity: 0 }}
