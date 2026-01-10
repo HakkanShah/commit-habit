@@ -196,17 +196,17 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
             {/* Header - Redesigned */}
             <header className="sticky top-0 z-50 bg-[#0d1117]/90 backdrop-blur-xl border-b border-white/5">
                 <div className="max-w-5xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <img
-                            src="/logo.png"
-                            alt="Commit Habit"
-                            className="w-8 h-8 sm:w-9 sm:h-9 object-contain transition-transform group-hover:scale-110 group-hover:rotate-6"
-                            style={{ filter: "drop-shadow(0 0 8px rgba(57,211,83,0.4))" }}
-                        />
-                        <span className="font-bold text-base sm:text-lg">
+                    <Link href="/" className="flex items-center group">
+                        <span className="font-bold text-base sm:text-lg flex items-center">
                             <span className="text-white">C</span>
-                            <span className="text-[#39d353]">o</span>
-                            <span className="text-white">mmit </span>
+                            <img
+                                src="/logo.png"
+                                alt="o"
+                                className="h-[0.85em] w-auto object-contain inline-block align-middle -mx-0.5 transition-transform group-hover:scale-110 group-hover:rotate-12"
+                                style={{ filter: "drop-shadow(0 0 8px rgba(57,211,83,0.4))" }}
+                            />
+                            <span className="text-white">mmit</span>
+                            <span className="mx-1">&nbsp;</span>
                             <span className="text-[#39d353]">Habit</span>
                         </span>
                     </Link>
@@ -282,11 +282,11 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                     </div>
                 </div>
 
-                {/* Stats Cards - Horizontal scroll on mobile */}
+                {/* Stats Cards - 2x2 grid on mobile, 4 cols on desktop */}
                 <div className="mb-6">
-                    <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 sm:gap-4 scrollbar-hide">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                         {/* Total Repos */}
-                        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#8b949e]/30 transition-all">
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#8b949e]/30 transition-all">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-8 h-8 rounded-lg bg-[#8b949e]/10 flex items-center justify-center">
                                     <Github size={14} className="text-[#8b949e]" />
@@ -297,7 +297,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                         </div>
 
                         {/* Active */}
-                        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#39d353]/30 transition-all">
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#39d353]/30 transition-all">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-8 h-8 rounded-lg bg-[#39d353]/10 flex items-center justify-center">
                                     <Zap size={14} className="text-[#39d353]" />
@@ -308,7 +308,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                         </div>
 
                         {/* Paused */}
-                        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#d29922]/30 transition-all">
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#d29922]/30 transition-all">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-8 h-8 rounded-lg bg-[#d29922]/10 flex items-center justify-center">
                                     <Activity size={14} className="text-[#d29922]" />
@@ -319,7 +319,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                         </div>
 
                         {/* Today's Commits */}
-                        <div className="flex-shrink-0 w-[140px] sm:w-auto bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#58a6ff]/30 transition-all">
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#58a6ff]/30 transition-all">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-8 h-8 rounded-lg bg-[#58a6ff]/10 flex items-center justify-center">
                                     <TrendingUp size={14} className="text-[#58a6ff]" />
