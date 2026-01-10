@@ -21,26 +21,50 @@ jobs:
         run: |
           echo "🚀 Triggering auto-commit at $(date -u)"
           
-          response=$(curl -s -w "\n%{http_code}" -X GET "${APP_URL}/api/cron/daily" \
-            -H "Authorization: Bearer ${CRON_SECRET}" \
-            -H "Content-Type: application/json")
+          # Retry up to 3 times with increasing delays
+          max_attempts=3
+          attempt=1
           
-          # Extract HTTP status code (last line)
-          http_code=$(echo "$response" | tail -n1)
-          # Extract response body (all but last line)
-          body=$(echo "$response" | sed '$d')
+          while [ $attempt -le $max_attempts ]; do
+            echo "📡 Attempt $attempt of $max_attempts..."
+            
+            response=$(curl -s -w "\n%{http_code}" \
+              --connect-timeout 30 \
+              --max-time 120 \
+              -X GET "${APP_URL}/api/cron/daily" \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -H "Content-Type: application/json" \
+              -H "User-Agent: CommitHabit-GitHubActions/1.0" \
+              -H "Accept: application/json")
           
-          echo "📡 Response Status: $http_code"
-          echo "📋 Response Body: $body"
+            # Extract HTTP status code (last line)
+            http_code=$(echo "$response" | tail -n1)
+            # Extract response body (all but last line)
+            body=$(echo "$response" | sed '$d')
           
-          # Check if request was successful
-          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-            echo "✅ Auto-commit trigger successful!"
-            exit 0
-          else
-            echo "❌ Auto-commit trigger failed with status $http_code"
-            exit 1
-          fi
+            echo "📋 Response Status: $http_code"
+            echo "📋 Response Body: $body"
+          
+            # Check if request was successful
+            if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+              echo "✅ Auto-commit trigger successful!"
+              exit 0
+            fi
+            
+            # If middleware failed, wait and retry
+            if echo "$body" | grep -q "MIDDLEWARE_INVOCATION_FAILED"; then
+              echo "⚠️ Middleware error, retrying in $((attempt * 10)) seconds..."
+              sleep $((attempt * 10))
+              attempt=$((attempt + 1))
+            else
+              # Other error, don't retry
+              echo "❌ Auto-commit trigger failed with status $http_code"
+              exit 1
+            fi
+          done
+          
+          echo "❌ All retry attempts failed"
+          exit 1
       
       - name: Summary
         if: always()
