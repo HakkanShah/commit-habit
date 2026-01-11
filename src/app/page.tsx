@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { HeroSequence } from '@/components/hero-sequence'
@@ -35,6 +36,18 @@ const cardHover = {
 }
 
 export default function HomePage() {
+  // Track page visit
+  useEffect(() => {
+    fetch('/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        page: '/',
+        referrer: document.referrer || null,
+      }),
+    }).catch(() => { }) // Silent fail
+  }, [])
+
   return (
     <div className="min-h-screen bg-[#0d1117] text-white overflow-x-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
       {/* Global Fixed Background */}

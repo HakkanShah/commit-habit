@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRight, Zap, Activity, TrendingUp, BarChart3, X } from 'lucide-react'
 import { InstallationCard } from './installation-card'
@@ -67,8 +67,15 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
     const router = useRouter()
     const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-    // Show login success toast on first visit
+    // Show login success toast on first visit + track page view
     useEffect(() => {
+        // Track dashboard visit
+        fetch('/api/analytics/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ page: '/dashboard' }),
+        }).catch(() => { })
+
         const installed = searchParams.get('installed')
         const hasShownWelcome = sessionStorage.getItem('hasShownWelcome')
 

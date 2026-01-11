@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForUser } from '@/lib/github'
 import { setSessionCookie } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { sendWelcomeEmail } from '@/lib/email'
+import { sendWelcomeEmail, sendAdminNewUserNotification } from '@/lib/email'
 import {
     AppError,
     AuthenticationError,
@@ -71,16 +71,16 @@ export async function GET(request: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-    // Handle GitHub App installation callback
-    if (setupAction === 'install') {
+    // Handle GitHub App installation callback (install or update repos)
+    if (setupAction === 'install' || setupAction === 'update') {
         const installationId = validateInstallationId(installationIdStr)
 
         if (!installationId) {
             console.warn('[AUTH] Installation callback with invalid installation_id:', installationIdStr)
         }
 
-        // User just installed the app, redirect to dashboard
-        // The webhook will have already created the installation record
+        // User just installed/updated the app, redirect to dashboard
+        // The webhook will have already created/updated the installation record
         const redirectUrl = new URL(`${appUrl}/dashboard`)
         redirectUrl.searchParams.set('installed', 'true')
         if (installationId) {
@@ -191,6 +191,19 @@ export async function GET(request: NextRequest) {
                         })
                         .catch(err => console.error('[AUTH] Failed to send welcome email:', err))
                 }
+
+                // Send admin notification (non-blocking)
+                sendAdminNewUserNotification({
+                    email: user.email,
+                    githubUsername: user.login,
+                    name: user.name,
+                    avatarUrl: user.avatar_url,
+                    githubId: user.id,
+                })
+                    .then(sent => {
+                        if (sent) console.log('[AUTH] Admin notification sent for new user:', user.login)
+                    })
+                    .catch(err => console.error('[AUTH] Failed to send admin notification:', err))
             } catch (dbError) {
                 logError(dbError, {
                     action: 'create user',
