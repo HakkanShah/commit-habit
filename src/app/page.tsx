@@ -1,13 +1,26 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
+import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { HeroSequence } from '@/components/hero-sequence'
-import { AnimatedTerminal } from '@/components/animated-terminal'
-import { WorkflowAnimation } from '@/components/workflow-animation'
 import { ErrorBanner } from '@/components/error-banner'
-import { Particles } from '@/components/particles'
+
+// Lazy load heavy components for better initial load performance
+const AnimatedTerminal = dynamic(() => import('@/components/animated-terminal').then(mod => ({ default: mod.AnimatedTerminal })), {
+  loading: () => <div className="h-[300px] bg-[#161b22] rounded-xl animate-pulse" />,
+  ssr: false
+})
+
+const WorkflowAnimation = dynamic(() => import('@/components/workflow-animation').then(mod => ({ default: mod.WorkflowAnimation })), {
+  loading: () => <div className="h-[200px] bg-[#161b22]/50 rounded-xl animate-pulse" />,
+  ssr: false
+})
+
+const Particles = dynamic(() => import('@/components/particles').then(mod => ({ default: mod.Particles })), {
+  ssr: false
+})
 
 const fadeInUp = {
   initial: { opacity: 0, y: 40 },
@@ -49,10 +62,10 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-white overflow-x-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
+    <main role="main" aria-label="CommitHabit Landing Page" className="min-h-screen bg-[#0d1117] text-white overflow-x-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
       {/* Global Fixed Background */}
-      <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] animate-grid pointer-events-none z-0" />
-      <div className="fixed inset-0 bg-gradient-to-b from-[#0d1117] via-transparent to-[#050505] pointer-events-none z-0" />
+      <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] animate-grid pointer-events-none z-0" aria-hidden="true" />
+      <div className="fixed inset-0 bg-gradient-to-b from-[#0d1117] via-transparent to-[#050505] pointer-events-none z-0" aria-hidden="true" />
 
       <div className="relative z-10">
         <ErrorBanner />
@@ -282,6 +295,6 @@ export default function HomePage() {
           </div>
         </footer>
       </div>
-    </div>
+    </main>
   )
 }
