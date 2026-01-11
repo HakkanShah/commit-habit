@@ -3,9 +3,27 @@
 import { useEffect, useState } from 'react'
 import { XCircle, X } from 'lucide-react'
 import { parseURLError, clearURLError } from '@/lib/api-client'
+import { playErrorSound, playDismissSound } from '@/lib/sounds'
 
 interface ErrorBannerProps {
     className?: string
+}
+
+/**
+ * Log error to dev console with structured format
+ */
+function logClientError(error: string, message: string, context?: Record<string, unknown>) {
+    if (process.env.NODE_ENV === 'development' || typeof window !== 'undefined') {
+        console.group('%c[Auth Error]', 'color: #f85149; font-weight: bold;')
+        console.log('%cError Code:', 'color: #8b949e;', error)
+        console.log('%cMessage:', 'color: #8b949e;', message)
+        console.log('%cTimestamp:', 'color: #8b949e;', new Date().toISOString())
+        if (context) {
+            console.log('%cContext:', 'color: #8b949e;', context)
+        }
+        console.log('%cURL:', 'color: #8b949e;', window.location.href)
+        console.groupEnd()
+    }
 }
 
 /**
@@ -19,6 +37,15 @@ export function ErrorBanner({ className = '' }: ErrorBannerProps) {
     useEffect(() => {
         const urlError = parseURLError()
         if (urlError) {
+            // Log to dev console for debugging
+            logClientError(urlError.error, urlError.message, {
+                source: 'URL_PARAM',
+                page: window.location.pathname,
+            })
+
+            // Play error sound
+            playErrorSound()
+
             setErrorInfo(urlError)
             setIsVisible(true)
             // Clear URL params after small delay so user sees the message
@@ -27,6 +54,7 @@ export function ErrorBanner({ className = '' }: ErrorBannerProps) {
     }, [])
 
     const dismiss = () => {
+        playDismissSound()
         setIsVisible(false)
         setTimeout(() => setErrorInfo(null), 300)
     }
@@ -36,24 +64,44 @@ export function ErrorBanner({ className = '' }: ErrorBannerProps) {
     return (
         <div
             className={`
-                fixed top-20 left-1/2 transform -translate-x-1/2 z-40
-                max-w-md w-full mx-4
+                fixed top-4 left-4 right-4 z-[100]
+                sm:top-6 sm:left-1/2 sm:right-auto sm:-translate-x-1/2
+                sm:max-w-md sm:w-full
                 ${className}
             `}
         >
-            <div className="alert alert-error shadow-lg animate-slide-in-right">
-                <XCircle size={20} className="flex-shrink-0" />
-                <div className="flex-1">
-                    <p className="font-medium text-sm">{getErrorTitle(errorInfo.error)}</p>
-                    <p className="text-sm opacity-90">{errorInfo.message}</p>
+            <div
+                className="
+                    bg-[#161b22] border-2 border-[#f85149]/50 rounded-xl
+                    p-4 shadow-2xl shadow-black/50
+                    animate-in slide-in-from-top-4 fade-in duration-300
+                    relative overflow-hidden
+                "
+                role="alert"
+            >
+                {/* Red accent bar on left */}
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#f85149]" />
+
+                <div className="flex items-start gap-3 pl-2">
+                    <div className="flex-shrink-0 mt-0.5">
+                        <XCircle size={20} className="text-[#f85149]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-white text-sm sm:text-base">
+                            {getErrorTitle(errorInfo.error)}
+                        </p>
+                        <p className="text-sm text-[#c9d1d9] mt-1 leading-relaxed">
+                            {errorInfo.message}
+                        </p>
+                    </div>
+                    <button
+                        onClick={dismiss}
+                        className="flex-shrink-0 text-[#8b949e] hover:text-white transition-colors p-1 -m-1 rounded-lg hover:bg-white/10"
+                        aria-label="Dismiss error"
+                    >
+                        <X size={18} />
+                    </button>
                 </div>
-                <button
-                    onClick={dismiss}
-                    className="flex-shrink-0 hover:opacity-70 transition-opacity"
-                    aria-label="Dismiss error"
-                >
-                    <X size={18} />
-                </button>
             </div>
         </div>
     )
@@ -70,3 +118,4 @@ function getErrorTitle(errorCode: string): string {
     }
     return titles[errorCode] || 'Error'
 }
+

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { DashboardClient } from './dashboard-client'
 
-// ⚠️ DEV ONLY: Set to true to bypass login for UI testing
+// ⚠️ DEV ONLY: Set to true to bypass login for UI testing (MUST be false in production!)
 const BYPASS_AUTH = false
 
 // Mock data for testing when BYPASS_AUTH is true

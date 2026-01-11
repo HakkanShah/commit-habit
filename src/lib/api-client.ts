@@ -73,6 +73,58 @@ const ERROR_MESSAGES: Record<string, { message: string; action: string }> = {
 }
 
 // ============================================================================
+// Client-Side Error Logging
+// ============================================================================
+
+export interface ClientErrorContext {
+    source?: string
+    action?: string
+    endpoint?: string
+    statusCode?: number
+    [key: string]: unknown
+}
+
+/**
+ * Log error to browser console with structured format for debugging
+ * Works in development and production for client-side debugging
+ */
+export function logClientError(
+    error: ParsedError | APIError | { code: string; message: string },
+    context?: ClientErrorContext
+): void {
+    if (typeof window === 'undefined') return
+
+    const code = 'code' in error ? error.code : 'UNKNOWN'
+    const message = 'message' in error ? error.message : String(error)
+    const isRetryable = 'isRetryable' in error ? error.isRetryable : false
+    const suggestedAction = 'suggestedAction' in error ? error.suggestedAction : undefined
+
+    // Styled console output for visibility
+    console.group(
+        '%c[API Error]',
+        'color: #f85149; font-weight: bold; background: #161b22; padding: 2px 6px; border-radius: 4px;'
+    )
+    console.log('%cCode:', 'color: #8b949e; font-weight: 600;', code)
+    console.log('%cMessage:', 'color: #8b949e; font-weight: 600;', message)
+
+    if (suggestedAction) {
+        console.log('%cSuggested Action:', 'color: #58a6ff; font-weight: 600;', suggestedAction)
+    }
+
+    if (isRetryable) {
+        console.log('%cRetryable:', 'color: #39d353; font-weight: 600;', 'Yes')
+    }
+
+    if (context && Object.keys(context).length > 0) {
+        console.log('%cContext:', 'color: #d29922; font-weight: 600;', context)
+    }
+
+    console.log('%cTimestamp:', 'color: #8b949e;', new Date().toISOString())
+    console.log('%cURL:', 'color: #8b949e;', window.location.href)
+    console.groupEnd()
+}
+
+// ============================================================================
 // Error Parsing
 // ============================================================================
 
@@ -172,16 +224,18 @@ export function clearURLError(): void {
 
 interface FetchOptions extends RequestInit {
     timeout?: number
+    /** Enable automatic error logging to browser console (default: true) */
+    logErrors?: boolean
 }
 
 /**
- * Fetch wrapper with error handling and timeout
+ * Fetch wrapper with error handling, timeout, and auto-logging
  */
 export async function apiFetch<T>(
     url: string,
     options: FetchOptions = {}
 ): Promise<FetchResult<T>> {
-    const { timeout = 30000, ...fetchOptions } = options
+    const { timeout = 30000, logErrors = true, ...fetchOptions } = options
 
     // Create abort controller for timeout
     const controller = new AbortController()
@@ -203,9 +257,20 @@ export async function apiFetch<T>(
         }
 
         if (!response.ok) {
+            const parsedError = parseAPIError(response, body)
+
+            // Auto-log error to console for debugging
+            if (logErrors) {
+                logClientError(parsedError, {
+                    endpoint: url,
+                    statusCode: response.status,
+                    method: fetchOptions.method || 'GET',
+                })
+            }
+
             return {
                 data: null,
-                error: parseAPIError(response, body),
+                error: parsedError,
                 status: response.status,
             }
         }

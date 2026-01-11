@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react'
+import { playSound, SoundType } from '@/lib/sounds'
 
 // ============================================================================
 // Types
@@ -19,16 +20,18 @@ interface Toast {
         label: string
         onClick: () => void
     }
+    /** If true, don't play sound for this toast */
+    silent?: boolean
 }
 
 interface ToastContextValue {
     toasts: Toast[]
     showToast: (toast: Omit<Toast, 'id'>) => void
     dismissToast: (id: string) => void
-    success: (title: string, message?: string) => void
-    error: (title: string, message?: string, action?: Toast['action']) => void
-    warning: (title: string, message?: string) => void
-    info: (title: string, message?: string) => void
+    success: (title: string, message?: string, silent?: boolean) => void
+    error: (title: string, message?: string, action?: Toast['action'], silent?: boolean) => void
+    warning: (title: string, message?: string, silent?: boolean) => void
+    info: (title: string, message?: string, silent?: boolean) => void
 }
 
 // ============================================================================
@@ -62,6 +65,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         const id = `toast-${++toastIdCounter}`
         const duration = toast.duration ?? (toast.type === 'error' ? 6000 : 4000)
 
+        // Play sound effect unless silenced
+        if (!toast.silent) {
+            playSound(toast.type as SoundType)
+        }
+
         setToasts(prev => [...prev, { ...toast, id }])
 
         // Auto dismiss after duration
@@ -70,20 +78,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         }
     }, [dismissToast])
 
-    const success = useCallback((title: string, message?: string) => {
-        showToast({ type: 'success', title, message })
+    const success = useCallback((title: string, message?: string, silent?: boolean) => {
+        showToast({ type: 'success', title, message, silent })
     }, [showToast])
 
-    const error = useCallback((title: string, message?: string, action?: Toast['action']) => {
-        showToast({ type: 'error', title, message, action })
+    const error = useCallback((title: string, message?: string, action?: Toast['action'], silent?: boolean) => {
+        showToast({ type: 'error', title, message, action, silent })
     }, [showToast])
 
-    const warning = useCallback((title: string, message?: string) => {
-        showToast({ type: 'warning', title, message })
+    const warning = useCallback((title: string, message?: string, silent?: boolean) => {
+        showToast({ type: 'warning', title, message, silent })
     }, [showToast])
 
-    const info = useCallback((title: string, message?: string) => {
-        showToast({ type: 'info', title, message })
+    const info = useCallback((title: string, message?: string, silent?: boolean) => {
+        showToast({ type: 'info', title, message, silent })
     }, [showToast])
 
     return (
