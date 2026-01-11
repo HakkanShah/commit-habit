@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCodeForUser } from '@/lib/github'
 import { setSessionCookie } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendWelcomeEmail } from '@/lib/email'
 import {
     AppError,
     AuthenticationError,
@@ -181,6 +182,15 @@ export async function GET(request: NextRequest) {
                 })
 
                 userId = newUser.id
+
+                // Send welcome email (non-blocking)
+                if (user.email) {
+                    sendWelcomeEmail(user.email, user.name || user.login)
+                        .then(sent => {
+                            if (sent) console.log('[AUTH] Welcome email sent to:', user.email)
+                        })
+                        .catch(err => console.error('[AUTH] Failed to send welcome email:', err))
+                }
             } catch (dbError) {
                 logError(dbError, {
                     action: 'create user',

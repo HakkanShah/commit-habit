@@ -693,7 +693,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                     {/* Donut Chart - Repo Status */}
                                     <div className="bg-white/[0.02] rounded-xl p-5 border border-white/5">
                                         <h3 className="text-sm font-bold text-[#8b949e] uppercase tracking-wider mb-4">Repository Status</h3>
-                                        <div className="flex items-center gap-6">
+                                        <div className="flex flex-col sm:flex-row items-center gap-6">
                                             {/* SVG Donut Chart */}
                                             <div className="relative w-32 h-32 flex-shrink-0">
                                                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -732,20 +732,20 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                                 </div>
                                             </div>
                                             {/* Legend */}
-                                            <div className="space-y-3 flex-1">
+                                            <div className="space-y-3 w-full sm:flex-1">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-3 h-3 rounded-full bg-[#39d353]" />
                                                         <span className="text-sm">Active</span>
                                                     </div>
-                                                    <span className="text-sm font-bold text-[#39d353]">{activeCount} ({Math.round(activePercent)}%)</span>
+                                                    <span className="text-sm font-bold text-[#39d353] whitespace-nowrap">{activeCount} ({Math.round(activePercent)}%)</span>
                                                 </div>
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-3 h-3 rounded-full bg-[#d29922]" />
                                                         <span className="text-sm">Paused</span>
                                                     </div>
-                                                    <span className="text-sm font-bold text-[#d29922]">{pausedCount} ({Math.round(100 - activePercent)}%)</span>
+                                                    <span className="text-sm font-bold text-[#d29922] whitespace-nowrap">{pausedCount} ({Math.round(100 - activePercent)}%)</span>
                                                 </div>
                                                 <div className="pt-2 border-t border-white/5">
                                                     <p className="text-xs text-[#8b949e]">

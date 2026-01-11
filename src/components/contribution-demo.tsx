@@ -53,37 +53,37 @@ export function ContributionDemo() {
     return (
         <div className="w-full flex flex-col items-center gap-8">
             {/* Toggle / Status Indicator */}
-            <div className="flex items-center gap-4 bg-[#161b22] px-6 py-2 rounded-full border border-[#30363d] backdrop-blur-md relative overflow-hidden">
-                <div className="relative z-10 flex items-center gap-8 text-sm font-medium font-mono">
-                    <button
-                        onClick={() => setMode('before')}
-                        className={cn(
-                            "transition-colors duration-300",
-                            mode === 'before' ? "text-white" : "text-[#484f58]"
-                        )}
-                    >
-                        Before
-                    </button>
-                    <button
-                        onClick={() => setMode('after')}
-                        className={cn(
-                            "transition-colors duration-300",
-                            mode === 'after' ? "text-[#39d353]" : "text-[#484f58]"
-                        )}
-                    >
-                        After
-                    </button>
-                </div>
-
+            {/* Toggle / Status Indicator - Refined */}
+            <div className="flex p-1 bg-[#161b22] rounded-full border border-[#30363d] backdrop-blur-md relative">
                 {/* Sliding Indicator */}
                 <motion.div
-                    className="absolute top-1 bottom-1 w-1/2 left-0 bg-[#30363d]/50 rounded-full"
+                    className="absolute top-1 bottom-1 left-1 w-16 sm:w-24 rounded-full z-0"
                     animate={{
                         x: mode === 'before' ? 0 : '100%',
-                        backgroundColor: mode === 'before' ? 'rgba(48, 54, 61, 0.5)' : 'rgba(57, 211, 83, 0.1)'
+                        backgroundColor: mode === 'before' ? 'rgba(48, 54, 61, 0.5)' : 'rgba(57, 211, 83, 0.15)'
                     }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 />
+
+                {/* Buttons */}
+                <button
+                    onClick={() => setMode('before')}
+                    className={cn(
+                        "relative z-10 w-16 sm:w-24 py-2 text-[10px] sm:text-sm font-medium font-mono text-center transition-colors duration-300",
+                        mode === 'before' ? "text-white" : "text-[#484f58]"
+                    )}
+                >
+                    Before
+                </button>
+                <button
+                    onClick={() => setMode('after')}
+                    className={cn(
+                        "relative z-10 w-16 sm:w-24 py-2 text-[10px] sm:text-sm font-medium font-mono text-center transition-colors duration-300",
+                        mode === 'after' ? "text-[#39d353]" : "text-[#484f58]"
+                    )}
+                >
+                    After
+                </button>
             </div>
 
             {/* Grid Container */}

@@ -241,7 +241,7 @@ export default function HomePage() {
                   ⭐
                 </motion.span>
                 <span className="font-medium">Star this repo on GitHub</span>
-                <span className="text-xs text-[#8b949e] group-hover:text-[#d29922] transition-colors">It helps a lot!</span>
+                <span className="text-xs text-[#8b949e] group-hover:text-[#d29922] transition-colors hidden sm:inline">It helps a lot!</span>
               </motion.a>
             </motion.div>
           </div>
