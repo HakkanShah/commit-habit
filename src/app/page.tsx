@@ -48,7 +48,7 @@ export default function HomePage() {
         <HeroSequence />
 
         {/* Features Section - Glassmorphism & Hover Effects */}
-        <section className="relative pt-20 pb-8 lg:pt-32 lg:pb-12 overflow-hidden">
+        <section id="features" className="relative pt-8 pb-8 lg:pt-16 lg:pb-12 overflow-hidden">
           <div className="relative max-w-6xl mx-auto px-4 z-10">
             <motion.div className="text-center mb-8 lg:mb-10" {...fadeInUp}>
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#238636]/10 border border-[#238636]/20 text-[#39d353] text-xs font-mono mb-6 backdrop-blur-sm">
@@ -172,16 +172,33 @@ export default function HomePage() {
           {/* Floating Particles/Stars - Client Only */}
           <Particles />
 
-          <div className="relative max-w-xl mx-auto px-4 text-center z-10">
+          <div className="relative max-w-2xl mx-auto px-4 text-center z-10">
             <motion.div {...fadeInUp}>
               <h2 className="text-4xl lg:text-6xl font-black mb-6">
                 Ready to <span className="text-[#39d353]">start?</span>
               </h2>
-              <p className="text-[#8b949e] text-lg mb-10">
+              <p className="text-[#8b949e] text-lg mb-8">
                 Join thousands of developers keeping their streaks alive.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
+              {/* Stats Row */}
+              <div className="flex flex-wrap items-center justify-center gap-6 mb-10 text-sm">
+                <div className="flex items-center gap-2 px-4 py-2 bg-[#161b22] rounded-full border border-[#30363d]">
+                  <span className="text-[#39d353]">✓</span>
+                  <span className="text-[#c9d1d9]">100% Free</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-[#161b22] rounded-full border border-[#30363d]">
+                  <Shield size={14} className="text-[#58a6ff]" />
+                  <span className="text-[#c9d1d9]">MIT License</span>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-[#161b22] rounded-full border border-[#30363d]">
+                  <Zap size={14} className="text-[#d29922]" />
+                  <span className="text-[#c9d1d9]">Active Development</span>
+                </div>
+              </div>
+
+              {/* Main CTA Buttons */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-8">
                 <motion.a
                   href="/api/auth/github"
                   whileHover={{ scale: 1.05 }}
@@ -206,6 +223,26 @@ export default function HomePage() {
                   <ExternalLink size={16} />
                 </motion.a>
               </div>
+
+              {/* Star Button - Prominent */}
+              <motion.a
+                href="https://github.com/HakkanShah/commit-habit"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-[#161b22] to-[#1c2128] border border-[#30363d] hover:border-[#d29922]/50 rounded-full text-[#c9d1d9] hover:text-white transition-all group"
+              >
+                <motion.span
+                  animate={{ rotate: [0, 15, -15, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  className="text-[#d29922] group-hover:text-[#f0b800]"
+                >
+                  ⭐
+                </motion.span>
+                <span className="font-medium">Star this repo on GitHub</span>
+                <span className="text-xs text-[#8b949e] group-hover:text-[#d29922] transition-colors">It helps a lot!</span>
+              </motion.a>
             </motion.div>
           </div>
         </section>

@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Github, ChevronDown, LayoutDashboard } from 'lucide-react'
+import { ArrowRight, Github, ChevronDown, LayoutDashboard, Loader2 } from 'lucide-react'
 import { ContributionDemo } from './contribution-demo'
 
 export function HeroSequence() {
     const [step, setStep] = useState(0)
     const [isLoggedIn, setIsLoggedIn] = useState(false)
     const [isCheckingSession, setIsCheckingSession] = useState(true)
+    const [isConnecting, setIsConnecting] = useState(false)
 
     useEffect(() => {
         const timers = [
@@ -46,7 +47,7 @@ export function HeroSequence() {
             <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-[#050505]/80 pointer-events-none" />
 
             {/* Main Content */}
-            <div className="relative z-10 w-full max-w-5xl mx-auto px-4 py-12 flex flex-col items-center gap-12">
+            <div className="relative z-10 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center gap-6">
 
                 {/* Animated Title with Logo as 'O' */}
                 <motion.div
@@ -99,7 +100,7 @@ export function HeroSequence() {
                 </motion.div>
 
                 {/* Headline */}
-                <div className="text-center min-h-[60px] flex items-center justify-center">
+                <div className="text-center min-h-[40px] flex items-center justify-center -mt-2">
                     <AnimatePresence mode="wait">
                         {step >= 0 && (
                             <motion.h2
@@ -136,9 +137,19 @@ export function HeroSequence() {
                             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                             <div className="absolute inset-0 rounded-xl bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         </a>
+                    ) : isConnecting ? (
+                        <div className="group relative flex items-center justify-center gap-3 w-full bg-[#238636] text-white py-4 px-6 rounded-xl font-bold text-lg cursor-wait">
+                            <Loader2 size={22} className="animate-spin" />
+                            <span className="animate-pulse">Connecting to GitHub...</span>
+                            <div className="absolute inset-0 rounded-xl bg-[#39d353]/20 blur-xl opacity-100 animate-pulse" />
+                        </div>
                     ) : (
                         <a
                             href="/api/auth/github"
+                            onClick={(e) => {
+                                setIsConnecting(true)
+                                // Allow the navigation to continue
+                            }}
                             className="group relative flex items-center justify-center gap-3 w-full bg-[#238636] hover:bg-[#2ea043] text-white py-4 px-6 rounded-xl font-bold text-lg transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(57,211,83,0.4)]"
                         >
                             <Github size={22} className="group-hover:rotate-12 transition-transform" />
@@ -152,7 +163,7 @@ export function HeroSequence() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.8 }}
-                        className="flex items-center justify-center gap-6 mt-6 text-sm text-[#8b949e]"
+                        className="flex items-center justify-center gap-6 mt-4 text-sm text-[#8b949e]"
                     >
                         {['No PAT', 'Open Source', 'Free'].map((item, i) => (
                             <span key={i} className="flex items-center gap-2">
@@ -164,15 +175,22 @@ export function HeroSequence() {
                 </motion.div>
             </div>
 
-            {/* Scroll Indicator */}
-            <motion.div
+            {/* Scroll Indicator - Clickable for smooth scroll */}
+            <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.5, duration: 1 }}
-                className="absolute bottom-4 text-[#8b949e]"
+                className="absolute bottom-4 text-[#8b949e] hover:text-white transition-colors cursor-pointer"
+                onClick={() => {
+                    const featuresSection = document.getElementById('features')
+                    if (featuresSection) {
+                        featuresSection.scrollIntoView({ behavior: 'smooth' })
+                    }
+                }}
+                aria-label="Scroll to next section"
             >
                 <ChevronDown size={28} className="animate-bounce" />
-            </motion.div>
+            </motion.button>
         </section>
     )
 }
