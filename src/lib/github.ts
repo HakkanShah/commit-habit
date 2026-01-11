@@ -422,14 +422,17 @@ export async function exchangeCodeForUser(code: string): Promise<{
         )
 
         // Fetch user's primary email for contribution graph attribution
-        let primaryEmail: string | null = null
+        let primaryEmail: string | null = user.email || null // Start with public profile email
+
         try {
             const { data: emails } = await userOctokit.users.listEmailsForAuthenticatedUser()
             const primary = emails.find(e => e.primary && e.verified)
-            primaryEmail = primary?.email || null
+            if (primary?.email) {
+                primaryEmail = primary.email
+            }
         } catch (emailError) {
             // Email fetch might fail if user hasn't granted email scope - that's ok
-            console.warn('[GITHUB] Could not fetch user email:', emailError)
+            console.warn('[GITHUB] Could not fetch user email via API:', emailError)
         }
 
         return {
