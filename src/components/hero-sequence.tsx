@@ -55,12 +55,12 @@ export function HeroSequence() {
                     transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
                     className="flex items-center justify-center"
                 >
-                    <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 flex items-center">
+                    <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-wide text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 flex flex-wrap items-center justify-center gap-y-2">
                         <span>C</span>
                         <motion.img
                             src="/logo.png"
                             alt="o"
-                            className="h-[0.95em] w-auto object-contain inline-block align-middle -mx-2 translate-y-[0.15em]"
+                            className="h-[0.9em] w-auto object-contain inline-block align-middle -mx-[0.05em] translate-y-[0.1em]"
                             initial={{ opacity: 0, scale: 0, rotate: -180 }}
                             animate={{
                                 opacity: 1,
@@ -83,7 +83,7 @@ export function HeroSequence() {
                             }}
                         />
                         <span>mmit</span>
-                        <span className="mx-1">&nbsp;</span>
+                        <span className="w-[0.2em] sm:w-[0.3em] inline-block"></span>
                         <span className="text-[#39d353] drop-shadow-[0_0_30px_rgba(57,211,83,0.3)]">Habit</span>
                     </h1>
                 </motion.div>

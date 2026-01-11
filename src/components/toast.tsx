@@ -108,7 +108,7 @@ function ToastContainer({
     if (toasts.length === 0) return null
 
     return (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-[100] flex flex-col gap-3 sm:max-w-sm sm:w-full">
+        <div className="fixed top-4 left-4 right-4 sm:top-auto sm:bottom-4 sm:left-auto sm:right-4 z-[100] flex flex-col gap-3 sm:max-w-sm sm:w-full">
             {toasts.map(toast => (
                 <ToastItem key={toast.id} toast={toast} onDismiss={onDismiss} />
             ))}

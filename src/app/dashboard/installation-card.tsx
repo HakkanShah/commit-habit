@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Pause, Play, Loader2, GitCommit, Trash2, MoreVertical, X, ExternalLink, Clock, Zap } from 'lucide-react'
+import { Pause, Play, Loader2, GitCommit, Trash2, MoreVertical, X, ExternalLink, Clock, Zap, ChevronDown, CheckCircle, XCircle, SkipForward, History } from 'lucide-react'
 import { useToast } from '@/components/toast'
 
 interface ActivityLog {
@@ -34,6 +34,7 @@ interface InstallationCardProps {
 export function InstallationCard({ installation, isLoading = false, isCommitting = false, onToggle, onRemove, onCommit }: InstallationCardProps) {
     const [showConfirm, setShowConfirm] = useState(false)
     const [showMenu, setShowMenu] = useState(false)
+    const [showHistory, setShowHistory] = useState(false)
     const { error: showError } = useToast()
 
     const repoName = installation.repoFullName.split('/')[1] || installation.repoFullName
@@ -65,15 +66,45 @@ export function InstallationCard({ installation, isLoading = false, isCommitting
         return `${diffDays}d ago`
     }
 
+    // Get icon for activity type
+    const getActivityIcon = (action: string) => {
+        switch (action) {
+            case 'commit_created':
+                return <CheckCircle size={14} className="text-[#39d353]" />
+            case 'skipped_has_commits':
+                return <SkipForward size={14} className="text-[#58a6ff]" />
+            case 'error':
+                return <XCircle size={14} className="text-[#f85149]" />
+            default:
+                return <GitCommit size={14} className="text-[#8b949e]" />
+        }
+    }
+
+    // Get label for activity type
+    const getActivityLabel = (action: string) => {
+        switch (action) {
+            case 'commit_created':
+                return 'Commit'
+            case 'skipped_has_commits':
+                return 'Skipped'
+            case 'error':
+                return 'Error'
+            default:
+                return action
+        }
+    }
+
     return (
         <>
             <div className={`group flex items-center gap-4 p-4 sm:p-5 transition-all hover:bg-white/[0.02] ${isLoading ? 'opacity-60' : ''}`}>
                 {/* Status Icon with animation */}
-                <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${installation.active
-                    ? 'bg-gradient-to-br from-[#39d353]/20 to-[#238636]/20 text-[#39d353]'
-                    : 'bg-[#21262d] text-[#8b949e]'
+                <div className={`relative w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${isCommitting
+                    ? 'bg-gradient-to-br from-[#58a6ff]/20 to-[#388bfd]/20 text-[#58a6ff]'
+                    : installation.active
+                        ? 'bg-gradient-to-br from-[#39d353]/20 to-[#238636]/20 text-[#39d353]'
+                        : 'bg-[#21262d] text-[#8b949e]'
                     }`}>
-                    {isLoading ? (
+                    {isLoading || isCommitting ? (
                         <Loader2 size={20} className="animate-spin" />
                     ) : (
                         <>
@@ -101,9 +132,16 @@ export function InstallationCard({ installation, isLoading = false, isCommitting
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#8b949e]">
                         <span className="opacity-70">{ownerName}</span>
                         <span className="hidden sm:inline">•</span>
-                        <span className={`font-medium ${installation.active ? 'text-[#39d353]' : 'text-[#d29922]'}`}>
-                            {installation.active ? '● Active' : '○ Paused'}
-                        </span>
+                        {isCommitting ? (
+                            <span className="font-medium text-[#58a6ff] flex items-center gap-1">
+                                <Loader2 size={10} className="animate-spin" />
+                                Committing...
+                            </span>
+                        ) : (
+                            <span className={`font-medium ${installation.active ? 'text-[#39d353]' : 'text-[#d29922]'}`}>
+                                {installation.active ? '● Active' : '○ Paused'}
+                            </span>
+                        )}
                         <span className="hidden sm:inline">•</span>
                         <span className="hidden sm:flex items-center gap-1">
                             <Clock size={12} />
@@ -177,8 +215,8 @@ export function InstallationCard({ installation, isLoading = false, isCommitting
                                     onClick={() => { setShowMenu(false); onCommit() }}
                                     disabled={isCommitting || !installation.active}
                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors ${installation.active
-                                            ? 'text-[#58a6ff] hover:bg-[#58a6ff]/10'
-                                            : 'text-[#8b949e] cursor-not-allowed'
+                                        ? 'text-[#58a6ff] hover:bg-[#58a6ff]/10'
+                                        : 'text-[#8b949e] cursor-not-allowed'
                                         }`}
                                 >
                                     {isCommitting ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
@@ -223,6 +261,63 @@ export function InstallationCard({ installation, isLoading = false, isCommitting
                     className="fixed inset-0 z-10"
                     onClick={() => setShowMenu(false)}
                 />
+            )}
+
+            {/* Activity History Section */}
+            {installation.activityLogs.length > 0 && (
+                <div className="border-t border-white/5">
+                    <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        className="w-full flex items-center justify-between px-4 sm:px-5 py-3 text-sm text-[#8b949e] hover:text-white hover:bg-white/[0.02] transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <History size={14} />
+                            <span>Activity History</span>
+                            <span className="text-xs bg-white/5 px-2 py-0.5 rounded-full">
+                                {installation.activityLogs.length}
+                            </span>
+                        </div>
+                        <ChevronDown
+                            size={16}
+                            className={`transition-transform duration-200 ${showHistory ? 'rotate-180' : ''}`}
+                        />
+                    </button>
+
+                    {showHistory && (
+                        <div className="px-4 sm:px-5 pb-4 space-y-2">
+                            {installation.activityLogs.map((log) => (
+                                <div
+                                    key={log.id}
+                                    className="flex items-start gap-3 p-3 bg-[#0d1117] rounded-lg border border-white/5"
+                                >
+                                    <div className="mt-0.5">
+                                        {getActivityIcon(log.action)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${log.action === 'commit_created'
+                                                ? 'bg-[#39d353]/10 text-[#39d353]'
+                                                : log.action === 'error'
+                                                    ? 'bg-[#f85149]/10 text-[#f85149]'
+                                                    : 'bg-[#58a6ff]/10 text-[#58a6ff]'
+                                                }`}>
+                                                {getActivityLabel(log.action)}
+                                            </span>
+                                            <span className="text-xs text-[#8b949e]">
+                                                {getRelativeTime(log.createdAt)}
+                                            </span>
+                                        </div>
+                                        {log.message && (
+                                            <p className="text-sm text-[#c9d1d9] truncate">
+                                                {log.message}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Confirmation Modal */}

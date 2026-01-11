@@ -197,16 +197,16 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
             <header className="sticky top-0 z-50 bg-[#0d1117]/90 backdrop-blur-xl border-b border-white/5">
                 <div className="max-w-5xl mx-auto flex items-center justify-between px-4 sm:px-6 py-3">
                     <Link href="/" className="flex items-center group">
-                        <span className="font-black text-xl sm:text-2xl flex items-center tracking-tight">
+                        <span className="font-black text-xl sm:text-2xl flex items-center tracking-wide">
                             <span className="text-white">C</span>
                             <img
                                 src="/logo.png"
                                 alt="o"
-                                className="h-[0.95em] w-auto object-contain inline-block align-middle -mx-2 translate-y-[0.15em] transition-transform group-hover:scale-110 group-hover:rotate-12"
+                                className="h-[0.9em] w-auto object-contain inline-block align-middle -mx-[0.05em] translate-y-[0.1em] transition-transform group-hover:scale-110 group-hover:rotate-12"
                                 style={{ filter: "drop-shadow(0 0 15px rgba(57,211,83,0.5))" }}
                             />
                             <span className="text-white">mmit</span>
-                            <span className="mx-1">&nbsp;</span>
+                            <span className="w-[0.2em] inline-block"></span>
                             <span className="text-[#39d353] drop-shadow-[0_0_20px_rgba(57,211,83,0.3)]">Habit</span>
                         </span>
                     </Link>
@@ -284,49 +284,53 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
 
                 {/* Stats Cards - 2x2 grid on mobile, 4 cols on desktop */}
                 <div className="mb-6">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                         {/* Total Repos */}
-                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#8b949e]/30 transition-all">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-[#8b949e]/10 flex items-center justify-center">
-                                    <Github size={14} className="text-[#8b949e]" />
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-[#8b949e]/30 transition-all">
+                            <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-[#8b949e]/10 flex items-center justify-center">
+                                    <Github size={12} className="text-[#8b949e] sm:hidden" />
+                                    <Github size={14} className="text-[#8b949e] hidden sm:block" />
                                 </div>
-                                <p className="text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Repos</p>
+                                <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Repos</p>
                             </div>
-                            <p className="text-2xl sm:text-3xl font-bold tabular-nums">{totalCount}</p>
+                            <p className="text-xl sm:text-3xl font-bold tabular-nums">{totalCount}</p>
                         </div>
 
                         {/* Active */}
-                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#39d353]/30 transition-all">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-[#39d353]/10 flex items-center justify-center">
-                                    <Zap size={14} className="text-[#39d353]" />
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-[#39d353]/30 transition-all">
+                            <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-[#39d353]/10 flex items-center justify-center">
+                                    <Zap size={12} className="text-[#39d353] sm:hidden" />
+                                    <Zap size={14} className="text-[#39d353] hidden sm:block" />
                                 </div>
-                                <p className="text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Active</p>
+                                <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Active</p>
                             </div>
-                            <p className="text-2xl sm:text-3xl font-bold text-[#39d353] tabular-nums">{activeCount}</p>
+                            <p className="text-xl sm:text-3xl font-bold text-[#39d353] tabular-nums">{activeCount}</p>
                         </div>
 
                         {/* Paused */}
-                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#d29922]/30 transition-all">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-[#d29922]/10 flex items-center justify-center">
-                                    <Activity size={14} className="text-[#d29922]" />
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-[#d29922]/30 transition-all">
+                            <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-[#d29922]/10 flex items-center justify-center">
+                                    <Activity size={12} className="text-[#d29922] sm:hidden" />
+                                    <Activity size={14} className="text-[#d29922] hidden sm:block" />
                                 </div>
-                                <p className="text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Paused</p>
+                                <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Paused</p>
                             </div>
-                            <p className="text-2xl sm:text-3xl font-bold text-[#d29922] tabular-nums">{totalCount - activeCount}</p>
+                            <p className="text-xl sm:text-3xl font-bold text-[#d29922] tabular-nums">{totalCount - activeCount}</p>
                         </div>
 
                         {/* Today's Commits */}
-                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-xl p-4 hover:border-[#58a6ff]/30 transition-all">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-[#58a6ff]/10 flex items-center justify-center">
-                                    <TrendingUp size={14} className="text-[#58a6ff]" />
+                        <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-[#58a6ff]/30 transition-all">
+                            <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-[#58a6ff]/10 flex items-center justify-center">
+                                    <TrendingUp size={12} className="text-[#58a6ff] sm:hidden" />
+                                    <TrendingUp size={14} className="text-[#58a6ff] hidden sm:block" />
                                 </div>
-                                <p className="text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Today</p>
+                                <p className="text-[9px] sm:text-[10px] uppercase tracking-wider text-[#8b949e] font-medium">Today</p>
                             </div>
-                            <p className="text-2xl sm:text-3xl font-bold text-[#58a6ff] tabular-nums">
+                            <p className="text-xl sm:text-3xl font-bold text-[#58a6ff] tabular-nums">
                                 {installations.reduce((sum, i) => sum + i.commitsToday, 0)}
                             </p>
                         </div>
@@ -408,8 +412,19 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
 
             {/* Footer */}
             <footer className="border-t border-white/5 mt-16">
-                <div className="max-w-4xl mx-auto px-4 py-6 text-center text-sm text-[#8b949e]">
-                    <p>Built with 💚 for developers who want to stay consistent</p>
+                <div className="max-w-4xl mx-auto px-4 py-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm text-[#8b949e]">
+                    <p className="flex items-center gap-2">
+                        <span>Crafted by</span>
+                        <a
+                            href="https://hakkan.is-a.dev"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-white hover:text-[#39d353] transition-colors underline decoration-[#39d353]/50 underline-offset-2"
+                        >
+                            Hakkan
+                        </a>
+                    </p>
+                    <span className="text-xs text-[#8b949e]/50">Keep the streak alive 🔥</span>
                 </div>
             </footer>
         </div>

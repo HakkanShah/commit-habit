@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion'
 import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { HeroSequence } from '@/components/hero-sequence'
-import { TerminalWindow, TerminalLine } from '@/components/terminal-window'
+import { AnimatedTerminal } from '@/components/animated-terminal'
+import { WorkflowAnimation } from '@/components/workflow-animation'
 import { ErrorBanner } from '@/components/error-banner'
 import { Particles } from '@/components/particles'
 
@@ -49,7 +50,7 @@ export default function HomePage() {
         {/* Features Section - Glassmorphism & Hover Effects */}
         <section className="relative pt-20 pb-8 lg:pt-32 lg:pb-12 overflow-hidden">
           <div className="relative max-w-6xl mx-auto px-4 z-10">
-            <motion.div className="text-center mb-16 lg:mb-24" {...fadeInUp}>
+            <motion.div className="text-center mb-8 lg:mb-10" {...fadeInUp}>
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#238636]/10 border border-[#238636]/20 text-[#39d353] text-xs font-mono mb-6 backdrop-blur-sm">
                 <Sparkles size={12} />
                 How It Works
@@ -60,6 +61,11 @@ export default function HomePage() {
               <p className="text-[#8b949e] max-w-xl mx-auto text-lg">
                 Automated peace of mind for developers who code everyday but sometimes forget to commit.
               </p>
+            </motion.div>
+
+            {/* Visual Workflow Animation - above feature cards */}
+            <motion.div {...fadeInUp} className="mb-10">
+              <WorkflowAnimation />
             </motion.div>
 
             {/* Feature Cards - Interactive & Glass */}
@@ -125,22 +131,9 @@ export default function HomePage() {
               {/* Terminal */}
               <motion.div
                 {...fadeInUp}
-                className="w-full order-1 lg:order-2 perspective-1000"
+                className="w-full order-1 lg:order-2"
               >
-                <motion.div
-                  whileHover={{ rotateY: -5, rotateX: 5 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  style={{ transformStyle: "preserve-3d" }}
-                >
-                  <TerminalWindow title="automation.service">
-                    <TerminalLine prompt={false}><span className="text-[#8b949e]"># 00:00 UTC - Daily Check</span></TerminalLine>
-                    <TerminalLine prompt={false}>Searching for user activity...</TerminalLine>
-                    <TerminalLine prompt={false}><span className="text-[#f85149]">⚠ Partial outage detected: No commits found</span></TerminalLine>
-                    <TerminalLine prompt={false}><span className="text-[#d29922]">→ Initiating backup protocol...</span></TerminalLine>
-                    <TerminalLine prompt={false}>git commit -m "docs: maintain streak"</TerminalLine>
-                    <TerminalLine prompt={false}><span className="text-[#39d353]">✓ Streak successfully protected!</span></TerminalLine>
-                  </TerminalWindow>
-                </motion.div>
+                <AnimatedTerminal />
               </motion.div>
 
               {/* Content */}
@@ -220,11 +213,21 @@ export default function HomePage() {
         {/* Footer */}
         <footer className="py-8 border-t border-[#30363d] bg-[#0d1117] relative z-10">
           <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-[#8b949e]">
-            <p>© 2024 CommitHabit. Open Source.</p>
-            <div className="flex gap-8">
-              <a href="#" className="hover:text-[#39d353] transition-colors">Privacy</a>
-              <a href="#" className="hover:text-[#39d353] transition-colors">Terms</a>
-              <a href="#" className="hover:text-[#39d353] transition-colors">Status</a>
+            <div className="flex items-center gap-2">
+              <span>Crafted by</span>
+              <a
+                href="https://hakkan.is-a.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-white hover:text-[#39d353] transition-colors underline decoration-[#39d353]/50 underline-offset-2"
+              >
+                Hakkan
+              </a>
+            </div>
+            <div className="flex items-center gap-6">
+              <span className="text-xs">© 2026 CommitHabit</span>
+              <span className="text-[#30363d]">•</span>
+              <a href="https://github.com/HakkanShah/commit-habit" target="_blank" rel="noopener noreferrer" className="hover:text-[#39d353] transition-colors">Open Source</a>
             </div>
           </div>
         </footer>
