@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { DashboardClient } from './dashboard-client'
 
 // ⚠️ DEV ONLY: Set to true to bypass login for UI testing (MUST be false in production!)
-const BYPASS_AUTH = false
+const BYPASS_AUTH = true
 
 // Mock data for testing when BYPASS_AUTH is true
 const MOCK_USER = {
@@ -44,16 +44,61 @@ const MOCK_INSTALLATIONS = [
     },
 ]
 
-export default async function DashboardPage() {
+// Props type for search params
+interface PageProps {
+    searchParams: Promise<{ empty?: string; status?: string }>
+}
+
+export default async function DashboardPage({ searchParams }: PageProps) {
     // Bypass auth for UI testing
     if (BYPASS_AUTH) {
+        const params = await searchParams
+        const showEmpty = params.empty === 'true'
+        const status = params.status // 'active' (green) or 'inactive' (amber)
+
+        // Mock installation with configurable commitsToday
+        const mockInstallations = [...MOCK_INSTALLATIONS]
+        if (status === 'active') {
+            mockInstallations[0].commitsToday = 5
+        } else if (status === 'inactive') {
+            mockInstallations[0].commitsToday = 0
+        }
+
         return (
-            <DashboardClient
-                user={MOCK_USER}
-                displayName="Test User"
-                githubAppUrl="https://github.com/apps/commit-habit/installations/new"
-                initialInstallations={MOCK_INSTALLATIONS}
-            />
+            <>
+                {/* Dev toggle banner */}
+                <div className="fixed bottom-4 left-4 z-50 bg-[#161b22] border border-white/10 rounded-xl p-3 shadow-xl text-sm flex gap-3 items-center">
+                    <p className="text-[#8b949e] font-medium mr-1">🧪 Animation Test:</p>
+
+                    <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+                        <a
+                            href="/dashboard?empty=true"
+                            className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${showEmpty ? 'bg-[#58a6ff] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                            Guest
+                        </a>
+                        <a
+                            href="/dashboard?status=inactive"
+                            className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${!showEmpty && status !== 'active' ? 'bg-[#d29922] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                            Standby
+                        </a>
+                        <a
+                            href="/dashboard?status=active"
+                            className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${!showEmpty && status === 'active' ? 'bg-[#39d353] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                        >
+                            Protected
+                        </a>
+                    </div>
+                </div>
+
+                <DashboardClient
+                    user={MOCK_USER}
+                    displayName="Test User"
+                    githubAppUrl="https://github.com/apps/commit-habit/installations/new"
+                    initialInstallations={showEmpty ? [] : mockInstallations}
+                />
+            </>
         )
     }
 

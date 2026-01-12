@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRight, Zap, Activity, TrendingUp, BarChart3, X } from 'lucide-react'
+import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRight, ChevronDown, Zap, Activity, TrendingUp, BarChart3, X } from 'lucide-react'
 import { InstallationCard } from './installation-card'
+import { WelcomeAnimation } from './WelcomeAnimation'
 import { useToast } from '@/components/toast'
 import { apiFetch } from '@/lib/api-client'
 import Link from 'next/link'
@@ -62,6 +63,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
     const [committingRepos, setCommittingRepos] = useState<Set<string>>(new Set())
     const [showAnalytics, setShowAnalytics] = useState(false)
     const [showProfileMenu, setShowProfileMenu] = useState(false)
+    const [proTipOpen, setProTipOpen] = useState(false)
     const { success, error: showError, warning } = useToast()
     const searchParams = useSearchParams()
     const router = useRouter()
@@ -122,6 +124,12 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
         [installations]
     )
     const totalCount = installations.length
+
+    // Check if any active repo has commits today
+    const hasCommitsToday = useMemo(() =>
+        installations.some(i => i.active && i.commitsToday > 0),
+        [installations]
+    )
 
     // Optimistic toggle (pause/resume)
     const handleToggle = useCallback(async (installationId: string) => {
@@ -392,26 +400,35 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                     {/* Welcome Card */}
                     <div className="relative bg-gradient-to-br from-[#161b22] via-[#1c2128] to-[#161b22] border border-white/5 rounded-2xl p-5 sm:p-6 overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-[#39d353]/10 rounded-full blur-3xl" />
-                        <div className="relative flex items-center gap-4">
-                            {user.avatarUrl && (
-                                <img
-                                    src={user.avatarUrl}
-                                    alt=""
-                                    className="w-14 h-14 rounded-2xl ring-2 ring-white/10 shadow-xl hidden sm:block"
-                                />
-                            )}
-                            <div className="flex-1">
-                                <p className="text-[#8b949e] text-sm mb-1">Welcome back,</p>
-                                <h1 className="text-xl sm:text-2xl font-bold">
-                                    <span className="bg-gradient-to-r from-white via-white to-[#39d353] bg-clip-text text-transparent">
-                                        {displayName.split(' ')[0]}
-                                    </span>
-                                    <span className="ml-2 text-2xl">👋</span>
-                                </h1>
-                                <p className="text-[#8b949e] text-sm mt-1 hidden sm:block">
-                                    Manage your automated commit streak
-                                </p>
+                        <div className="relative flex items-center justify-between gap-3 sm:gap-4">
+                            {/* Left side: Avatar + Welcome text */}
+                            <div className="flex items-center gap-3 sm:gap-4">
+                                {user.avatarUrl && (
+                                    <img
+                                        src={user.avatarUrl}
+                                        alt=""
+                                        className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ring-2 ring-white/10 shadow-xl hidden xs:block"
+                                    />
+                                )}
+                                <div>
+                                    <p className="text-[#8b949e] text-xs sm:text-sm mb-0.5 sm:mb-1">Welcome back,</p>
+                                    <h1 className="text-lg sm:text-2xl font-bold whitespace-nowrap">
+                                        <span className="bg-gradient-to-r from-white via-white to-[#39d353] bg-clip-text text-transparent">
+                                            {displayName.split(' ')[0]}
+                                        </span>
+                                        <span className="ml-1.5 sm:ml-2 text-lg sm:text-2xl">👋</span>
+                                    </h1>
+                                    <p className="text-[#8b949e] text-sm mt-1 hidden sm:block">
+                                        Manage your automated commit streak
+                                    </p>
+                                </div>
                             </div>
+
+                            {/* Right side: Contextual Animation */}
+                            <WelcomeAnimation
+                                hasRepos={installations.length > 0}
+                                hasCommitsToday={hasCommitsToday}
+                            />
                         </div>
                     </div>
 
@@ -548,20 +565,21 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                 {/* Pro Tip & Help Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
                     {/* Pro Tip */}
-                    <div className="bg-gradient-to-br from-[#1c2128] to-[#161b22] border border-[#58a6ff]/20 rounded-2xl p-5">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-[#58a6ff]/10 flex items-center justify-center flex-shrink-0">
-                                <GitCommit size={18} className="text-[#58a6ff]" />
+                    <details className="bg-gradient-to-br from-[#1c2128] to-[#161b22] border border-[#58a6ff]/20 rounded-2xl group">
+                        <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none hover:bg-white/[0.02] transition-colors">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-[#58a6ff]/10 flex items-center justify-center">
+                                    <GitCommit size={18} className="text-[#58a6ff]" />
+                                </div>
+                                <span className="font-medium text-sm text-white">Pro Tip</span>
                             </div>
-                            <div>
-                                <h4 className="text-sm font-semibold text-white mb-1">Pro Tip</h4>
-                                <p className="text-sm text-[#8b949e] leading-relaxed">
-                                    Keep at least one repository active to maintain your daily commit streak automatically!
-                                    The cron job runs every 6 hours and creates a backup commit if you haven&apos;t committed that day.
-                                </p>
-                            </div>
+                            <ChevronRight size={18} className="text-[#8b949e] transition-transform group-open:rotate-90" />
+                        </summary>
+                        <div className="px-5 pb-5 text-sm text-[#8b949e] leading-relaxed">
+                            Keep at least one repository active to maintain your daily commit streak automatically!
+                            The cron job runs every 6 hours and creates a backup commit if you haven&apos;t committed that day.
                         </div>
-                    </div>
+                    </details>
 
                     {/* Help Card */}
                     <details className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-2xl group">
@@ -897,16 +915,25 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="p-4 bg-[#58a6ff]/5 border border-[#58a6ff]/20 rounded-xl">
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-lg">💡</span>
-                                            <div>
+                                    <div
+                                        className="p-4 bg-[#58a6ff]/5 border border-[#58a6ff]/20 rounded-xl cursor-pointer hover:bg-[#58a6ff]/10 transition-colors"
+                                        onClick={() => setProTipOpen(!proTipOpen)}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-lg">💡</span>
                                                 <p className="text-sm font-medium text-[#58a6ff]">Pro Tip</p>
-                                                <p className="text-xs text-[#8b949e] mt-1">
-                                                    Each repo can have up to 5 automated commits/day. The cron runs every 6 hours.
-                                                </p>
                                             </div>
+                                            <ChevronDown
+                                                size={16}
+                                                className={`text-[#58a6ff] transition-transform duration-200 ${proTipOpen ? 'rotate-180' : ''}`}
+                                            />
                                         </div>
+                                        {proTipOpen && (
+                                            <p className="text-xs text-[#8b949e] mt-3 leading-relaxed">
+                                                Each repo can have up to 5 automated commits/day. The cron runs every 6 hours.
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
