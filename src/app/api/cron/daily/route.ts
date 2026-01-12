@@ -23,7 +23,8 @@ import {
 
 const CRON_SECRET = process.env.CRON_SECRET
 const MAX_COMMITS_PER_DAY = 5
-const CRON_TIMEOUT_MS = 55000 // 55 seconds (Vercel has 60s limit)
+const CRON_TIMEOUT_MS = 25000 // 25 seconds (cron-job.org has 30s limit)
+const MAX_CONCURRENT_INSTALLATIONS = 5 // Process up to 5 installations in parallel
 
 // ============================================================================
 // Types
@@ -326,18 +327,22 @@ export async function GET(request: NextRequest) {
 
         console.log(`[CRON] Processing ${installations.length} active installations`)
 
-        // Process installations with timeout protection
+        // Process installations in parallel with concurrency limit for speed
         const processingPromise = (async () => {
-            for (const installation of installations) {
-                // Check if we're running out of time
+            // Process in batches for better performance within timeout
+            for (let i = 0; i < installations.length; i += MAX_CONCURRENT_INSTALLATIONS) {
+                // Check if we're running out of time (leave 3s buffer)
                 const elapsed = Date.now() - startTime
-                if (elapsed > CRON_TIMEOUT_MS - 5000) {
+                if (elapsed > CRON_TIMEOUT_MS - 3000) {
                     console.warn(`[CRON] Timeout approaching, stopping after ${results.length}/${installations.length} installations`)
                     break
                 }
 
-                const result = await processInstallation(installation, today)
-                results.push(result)
+                const batch = installations.slice(i, i + MAX_CONCURRENT_INSTALLATIONS)
+                const batchResults = await Promise.all(
+                    batch.map(installation => processInstallation(installation, today))
+                )
+                results.push(...batchResults)
             }
         })()
 

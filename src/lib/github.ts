@@ -21,9 +21,9 @@ const GITHUB_APP_CLIENT_ID = process.env.GITHUB_APP_CLIENT_ID
 const GITHUB_APP_CLIENT_SECRET = process.env.GITHUB_APP_CLIENT_SECRET
 
 // Request configuration
-const DEFAULT_TIMEOUT_MS = 30000 // 30 seconds
-const MAX_RETRIES = 3
-const INITIAL_RETRY_DELAY_MS = 1000
+const DEFAULT_TIMEOUT_MS = 8000 // 8 seconds (optimized for cron-job.org)
+const MAX_RETRIES = 1 // Reduced retries to fit timeout constraints
+const INITIAL_RETRY_DELAY_MS = 500 // Faster retry
 
 // Validate configuration at module load
 const configErrors: string[] = []
