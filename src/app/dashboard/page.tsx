@@ -12,7 +12,19 @@ const MOCK_USER = {
     avatarUrl: 'https://avatars.githubusercontent.com/u/0?v=4',
 }
 
-const MOCK_INSTALLATIONS = [
+// Type for mock installations matching DashboardClient's Installation interface
+type MockInstallation = {
+    id: string
+    installationId: number
+    repoFullName: string
+    active: boolean
+    commitsToday: number
+    lastRunAt: string | null
+    createdAt: string
+    activityLogs: { id: string; action: string; message: string; createdAt: string }[]
+}
+
+const MOCK_INSTALLATIONS: MockInstallation[] = [
     {
         id: 'mock-1',
         installationId: 12345,
@@ -46,7 +58,7 @@ const MOCK_INSTALLATIONS = [
 
 // Props type for search params
 interface PageProps {
-    searchParams: Promise<{ empty?: string; status?: string }>
+    searchParams: Promise<{ empty?: string; status?: string; installed?: string; testMode?: string }>
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
@@ -55,6 +67,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         const params = await searchParams
         const showEmpty = params.empty === 'true'
         const status = params.status // 'active' (green) or 'inactive' (amber)
+        const installed = params.installed === 'true'
+        const testMode = params.testMode === 'true'
 
         // Mock installation with configurable commitsToday
         const mockInstallations = [...MOCK_INSTALLATIONS]
@@ -64,30 +78,73 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             mockInstallations[0].commitsToday = 0
         }
 
+        // Test mode: Start with 1 repo, after refresh (installed=true) show 2 repos
+        // This simulates the "new repo added" flow
+        let testInstallations = mockInstallations
+        if (testMode && !installed) {
+            // Phase 1: Before redirect - show only 1 repo
+            testInstallations = [mockInstallations[0]]
+        } else if (installed) {
+            // Phase 2: After "adding repo" - show both repos (simulating new repo appeared)
+            // Add a "newly added" repo to make it obvious
+            testInstallations = [
+                ...mockInstallations,
+                {
+                    id: 'mock-new',
+                    installationId: 99999,
+                    repoFullName: 'test-user/newly-added-repo ✨',
+                    active: true,
+                    commitsToday: 0,
+                    lastRunAt: null,
+                    createdAt: new Date().toISOString(),
+                    activityLogs: [],
+                },
+            ]
+        }
+
         return (
             <>
                 {/* Dev toggle banner */}
-                <div className="fixed bottom-4 left-4 z-50 bg-[#161b22] border border-white/10 rounded-xl p-3 shadow-xl text-sm flex gap-3 items-center">
-                    <p className="text-[#8b949e] font-medium mr-1">🧪 Animation Test:</p>
+                <div className="fixed bottom-4 left-4 z-50 bg-[#161b22] border border-white/10 rounded-xl p-3 shadow-xl text-sm flex flex-col gap-2">
+                    <div className="flex gap-3 items-center">
+                        <p className="text-[#8b949e] font-medium mr-1">🧪 Animation Test:</p>
 
-                    <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+                        <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+                            <a
+                                href="/dashboard?empty=true"
+                                className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${showEmpty ? 'bg-[#58a6ff] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                            >
+                                Guest
+                            </a>
+                            <a
+                                href="/dashboard?status=inactive"
+                                className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${!showEmpty && status !== 'active' ? 'bg-[#d29922] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                            >
+                                Standby
+                            </a>
+                            <a
+                                href="/dashboard?status=active"
+                                className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${!showEmpty && status === 'active' ? 'bg-[#39d353] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                            >
+                                Protected
+                            </a>
+                        </div>
+                    </div>
+
+                    {/* Test auto-refresh functionality */}
+                    <div className="flex gap-3 items-center border-t border-white/10 pt-2">
+                        <p className="text-[#8b949e] font-medium mr-1">🔄 Refresh Test:</p>
                         <a
-                            href="/dashboard?empty=true"
-                            className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${showEmpty ? 'bg-[#58a6ff] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                            href="/dashboard?testMode=true"
+                            className="px-3 py-1.5 rounded-md transition-all text-xs font-bold bg-[#58a6ff] text-black hover:bg-[#79c0ff]"
                         >
-                            Guest
+                            1. Start (1 repo)
                         </a>
                         <a
-                            href="/dashboard?status=inactive"
-                            className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${!showEmpty && status !== 'active' ? 'bg-[#d29922] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                            href="/dashboard?installed=true"
+                            className="px-3 py-1.5 rounded-md transition-all text-xs font-bold bg-[#238636] text-white hover:bg-[#2ea043]"
                         >
-                            Standby
-                        </a>
-                        <a
-                            href="/dashboard?status=active"
-                            className={`px-3 py-1.5 rounded-md transition-all text-xs font-bold ${!showEmpty && status === 'active' ? 'bg-[#39d353] text-black shadow-lg' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
-                        >
-                            Protected
+                            2. Add Repo → Refresh
                         </a>
                     </div>
                 </div>
@@ -96,7 +153,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                     user={MOCK_USER}
                     displayName="Test User"
                     githubAppUrl="https://github.com/apps/commit-habit/installations/new"
-                    initialInstallations={showEmpty ? [] : mockInstallations}
+                    initialInstallations={showEmpty ? [] : testInstallations}
                 />
             </>
         )

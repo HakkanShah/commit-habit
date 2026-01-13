@@ -69,7 +69,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
     const router = useRouter()
     const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-    // Show login success toast on first visit + track page view
+    // Show login success toast on first visit + track page view + refresh on new installation
     useEffect(() => {
         // Track dashboard visit
         fetch('/api/analytics/track', {
@@ -81,18 +81,34 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
         const installed = searchParams.get('installed')
         const hasShownWelcome = sessionStorage.getItem('hasShownWelcome')
 
-        if (installed === 'true' && !hasShownWelcome) {
-            // New installation - show installation success
-            success('Repository connected successfully! 🎉')
-            sessionStorage.setItem('hasShownWelcome', 'true')
+        if (installed === 'true') {
+            // New installation - refresh data after a short delay to ensure webhook has completed
+            // This ensures the newly added repo is visible without manual page refresh
+            const hasRefreshed = sessionStorage.getItem('hasRefreshedAfterInstall')
+
+            if (!hasRefreshed) {
+                sessionStorage.setItem('hasRefreshedAfterInstall', 'true')
+                // Delay to allow webhook to process, then refresh server data
+                setTimeout(() => {
+                    router.refresh()
+                }, 1000)
+            }
+
+            if (!hasShownWelcome) {
+                success('Repository connected successfully! 🎉')
+                sessionStorage.setItem('hasShownWelcome', 'true')
+            }
+
             // Clean URL
             window.history.replaceState({}, '', '/dashboard')
+            // Clear the refresh flag after URL is cleaned so future installs work
+            sessionStorage.removeItem('hasRefreshedAfterInstall')
         } else if (!hasShownWelcome) {
             // First visit to dashboard after login
             success(`Welcome back, ${displayName.split(' ')[0]}! 👋`)
             sessionStorage.setItem('hasShownWelcome', 'true')
         }
-    }, [searchParams, success, displayName])
+    }, [searchParams, success, displayName, router])
 
     // Logout handler with toast
     const handleLogout = useCallback(async () => {

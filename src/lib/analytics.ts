@@ -13,6 +13,7 @@ interface VisitorData {
     country?: string
     referrer?: string
     timestamp: string
+    visitorNumber?: number // Total visitor count for this page
 }
 
 /**
@@ -32,9 +33,12 @@ export async function sendVisitorNotification(data: VisitorData): Promise<boolea
     const displayLocation = isLocalhost ? '🏠 Localhost' : (data.country || 'Unknown')
     const displayIP = isLocalhost ? '127.0.0.1' : (data.ip || 'Unknown')
 
+    // Page display name
+    const pageName = data.page === '/dashboard' ? '📊 Dashboard' : '🏠 Homepage'
+
     // Create Discord embed
     const embed = {
-        title: '👀 New Visitor',
+        title: `👀 Visitor #${data.visitorNumber || '?'} — ${pageName}`,
         color: isLocalhost ? 0xfbbf24 : 0x39d353, // Yellow for localhost, green for production
         fields: [
             {
@@ -74,7 +78,7 @@ export async function sendVisitorNotification(data: VisitorData): Promise<boolea
             },
         ],
         footer: {
-            text: isLocalhost ? 'CommitHabit Analytics (Dev)' : 'CommitHabit Analytics',
+            text: isLocalhost ? 'CommitHabit Analytics (Dev)' : `CommitHabit Analytics • Total: ${data.visitorNumber || '?'} unique visitors`,
         },
         timestamp: data.timestamp,
     }

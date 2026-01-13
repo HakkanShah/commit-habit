@@ -65,3 +65,16 @@ model ActivityLog {
   @@index([installationId])
   @@index([createdAt])
 }
+
+// Visitor analytics for Discord notifications (rate-limited per IP+page)
+model VisitorLog {
+  id        String   @id @default(cuid())
+  ip        String
+  page      String   // "/" or "/dashboard"
+  country   String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@unique([ip, page]) // One notification per IP per page
+  @@index([createdAt])
+}
