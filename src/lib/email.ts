@@ -320,70 +320,203 @@ export async function sendAdminNewUserNotification(userData: NewUserData): Promi
 
     const htmlContent = `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>New User Signup</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table {border-collapse: collapse;}
+    </style>
+    <![endif]-->
+    <style>
+        /* Mobile-responsive styles */
+        @media only screen and (max-width: 600px) {
+            .main-card { 
+                border-radius: 0 !important; 
+                border-left: none !important; 
+                border-right: none !important; 
+                max-width: 100% !important;
+            }
+            .content-cell { 
+                padding-left: 16px !important; 
+                padding-right: 16px !important; 
+            }
+            .header-cell { 
+                padding: 24px 16px !important; 
+            }
+            .info-card-table {
+                width: auto !important;
+                margin: 0 auto !important;
+            }
+            .info-card-table td {
+                text-align: center !important;
+            }
+            .info-icon-cell {
+                display: block !important;
+                width: 100% !important;
+                padding-bottom: 8px !important;
+            }
+            .info-text-cell {
+                display: block !important;
+                width: 100% !important;
+                padding-left: 0 !important;
+                text-align: center !important;
+            }
+            .avatar-img {
+                width: 64px !important;
+                height: 64px !important;
+            }
+        }
+    </style>
 </head>
-<body style="margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d1117; color: #c9d1d9;">
-    <table cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #161b22; border-radius: 12px; border: 1px solid #30363d; overflow: hidden;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0d1117; color: #c9d1d9; -webkit-font-smoothing: antialiased;">
+    
+    <!-- Outer Container -->
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #0d1117;">
         <tr>
-            <td style="padding: 24px; text-align: center; background: linear-gradient(135deg, #238636 0%, #2ea043 100%);">
-                <h1 style="margin: 0; color: white; font-size: 24px;">🎉 New User Signup!</h1>
-            </td>
-        </tr>
-        <tr>
-            <td style="padding: 24px;">
-                <table cellpadding="0" cellspacing="0" style="width: 100%;">
+            <td align="center" style="padding: 16px 8px;">
+                
+                <!-- Main Card -->
+                <table role="presentation" cellpadding="0" cellspacing="0" class="main-card" style="width: 100%; max-width: 560px; background-color: #161b22; border-radius: 16px; border: 1px solid #30363d; overflow: hidden;">
+                    
+                    <!-- Header -->
                     <tr>
-                        <td style="text-align: center; padding-bottom: 20px;">
+                        <td class="header-cell" style="padding: 28px 24px; text-align: center; background: linear-gradient(135deg, #238636 0%, #2ea043 100%);">
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                <tr>
+                                    <td align="center">
+                                        <div style="font-size: 32px; margin-bottom: 8px;">🎉</div>
+                                        <h1 style="margin: 0; color: white; font-size: 22px; font-weight: 700;">New User Signup!</h1>
+                                        <p style="margin: 8px 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Someone just joined CommitHabit</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Avatar Section -->
+                    <tr>
+                        <td class="content-cell" style="padding: 24px 24px 16px; text-align: center;">
                             <img src="${userData.avatarUrl || 'https://github.com/identicons/default.png'}" 
-                                 alt="Avatar" 
-                                 style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid #30363d;">
+                                 alt="User Avatar" 
+                                 class="avatar-img"
+                                 style="width: 80px; height: 80px; border-radius: 50%; border: 4px solid #30363d; display: inline-block;">
+                            <h2 style="margin: 16px 0 4px; color: white; font-size: 20px; font-weight: 600;">
+                                ${userData.name || userData.githubUsername}
+                            </h2>
+                            <a href="https://github.com/${userData.githubUsername}" 
+                               style="color: #58a6ff; font-size: 15px; text-decoration: none;">
+                                @${userData.githubUsername}
+                            </a>
                         </td>
                     </tr>
+
+                    <!-- Divider -->
                     <tr>
-                        <td style="padding: 12px 0; border-bottom: 1px solid #30363d;">
-                            <strong style="color: #8b949e;">👤 Name:</strong>
-                            <span style="color: white; float: right;">${userData.name || 'Not provided'}</span>
+                        <td class="content-cell" style="padding: 0 24px;">
+                            <div style="height: 1px; background: linear-gradient(90deg, transparent, #30363d, transparent);"></div>
                         </td>
                     </tr>
+
+                    <!-- User Info Cards -->
                     <tr>
-                        <td style="padding: 12px 0; border-bottom: 1px solid #30363d;">
-                            <strong style="color: #8b949e;">🐙 GitHub Username:</strong>
-                            <span style="color: #58a6ff; float: right;">@${userData.githubUsername}</span>
+                        <td class="content-cell" style="padding: 20px 24px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                
+                                <!-- Email -->
+                                <tr>
+                                    <td style="padding: 12px 16px; background-color: #0d1117; border-radius: 10px; margin-bottom: 8px; text-align: center;">
+                                        <table role="presentation" class="info-card-table" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                            <tr>
+                                                <td class="info-icon-cell" style="width: 32px; vertical-align: middle;">
+                                                    <div style="width: 28px; height: 28px; background-color: #238636; border-radius: 8px; text-align: center; line-height: 28px; font-size: 14px; margin: 0 auto;">📧</div>
+                                                </td>
+                                                <td class="info-text-cell" style="padding-left: 12px; vertical-align: middle;">
+                                                    <div style="color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Email</div>
+                                                    <div style="color: white; font-size: 15px; font-weight: 500; word-break: break-all;">${userData.email || 'Private'}</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <tr><td style="height: 8px;"></td></tr>
+
+                                <!-- GitHub ID -->
+                                <tr>
+                                    <td style="padding: 12px 16px; background-color: #0d1117; border-radius: 10px; text-align: center;">
+                                        <table role="presentation" class="info-card-table" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                            <tr>
+                                                <td class="info-icon-cell" style="width: 32px; vertical-align: middle;">
+                                                    <div style="width: 28px; height: 28px; background-color: #58a6ff; border-radius: 8px; text-align: center; line-height: 28px; font-size: 14px; margin: 0 auto;">🆔</div>
+                                                </td>
+                                                <td class="info-text-cell" style="padding-left: 12px; vertical-align: middle;">
+                                                    <div style="color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">GitHub ID</div>
+                                                    <div style="color: white; font-size: 15px; font-weight: 500;">${userData.githubId}</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <tr><td style="height: 8px;"></td></tr>
+
+                                <!-- Signup Time -->
+                                <tr>
+                                    <td style="padding: 12px 16px; background-color: #0d1117; border-radius: 10px; text-align: center;">
+                                        <table role="presentation" class="info-card-table" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                            <tr>
+                                                <td class="info-icon-cell" style="width: 32px; vertical-align: middle;">
+                                                    <div style="width: 28px; height: 28px; background-color: #39d353; border-radius: 8px; text-align: center; line-height: 28px; font-size: 14px; margin: 0 auto;">🕐</div>
+                                                </td>
+                                                <td class="info-text-cell" style="padding-left: 12px; vertical-align: middle;">
+                                                    <div style="color: #8b949e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Signed Up</div>
+                                                    <div style="color: #39d353; font-size: 15px; font-weight: 500;">${timestamp}</div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                            </table>
                         </td>
                     </tr>
+
+                    <!-- CTA Button -->
                     <tr>
-                        <td style="padding: 12px 0; border-bottom: 1px solid #30363d;">
-                            <strong style="color: #8b949e;">📧 Email:</strong>
-                            <span style="color: white; float: right;">${userData.email || 'Private'}</span>
+                        <td class="content-cell" style="padding: 8px 24px 28px; text-align: center;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%;">
+                                <tr>
+                                    <td style="background-color: #21262d; border-radius: 12px; border: 1px solid #30363d;">
+                                        <a href="https://github.com/${userData.githubUsername}" 
+                                           style="display: block; color: white; text-decoration: none; padding: 14px 24px; font-weight: 600; font-size: 15px; text-align: center;">
+                                            👤 View GitHub Profile
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
+
+                    <!-- Footer -->
                     <tr>
-                        <td style="padding: 12px 0; border-bottom: 1px solid #30363d;">
-                            <strong style="color: #8b949e;">🆔 GitHub ID:</strong>
-                            <span style="color: #8b949e; float: right;">${userData.githubId}</span>
+                        <td class="content-cell" style="padding: 16px 24px; text-align: center; background-color: #0d1117; border-top: 1px solid #21262d;">
+                            <p style="color: #6b7280; font-size: 12px; margin: 0; line-height: 1.5;">
+                                CommitHabit Admin Notification<br>
+                                <span style="color: #4b5563;">This is an automated message</span>
+                            </p>
                         </td>
                     </tr>
-                    <tr>
-                        <td style="padding: 12px 0;">
-                            <strong style="color: #8b949e;">🕐 Signed up at:</strong>
-                            <span style="color: #39d353; float: right;">${timestamp}</span>
-                        </td>
-                    </tr>
+
                 </table>
-            </td>
-        </tr>
-        <tr>
-            <td style="padding: 16px 24px; text-align: center; background-color: #0d1117; border-top: 1px solid #30363d;">
-                <a href="https://github.com/${userData.githubUsername}" 
-                   style="display: inline-block; background-color: #21262d; color: #c9d1d9; text-decoration: none; padding: 10px 20px; border-radius: 6px; border: 1px solid #30363d;">
-                    View GitHub Profile →
-                </a>
+                
             </td>
         </tr>
     </table>
+    
 </body>
 </html>
 `
