@@ -69,7 +69,11 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
     const router = useRouter()
     const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-    // Show login success toast on first visit + track page view + refresh on new installation
+    // State for polling when waiting for new installations
+    const [isPollingForNewRepos, setIsPollingForNewRepos] = useState(false)
+
+    // Poll for new installations after GitHub App install/update
+    // This replaces the unreliable single refresh approach
     useEffect(() => {
         // Track dashboard visit
         fetch('/api/analytics/track', {
@@ -82,33 +86,84 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
         const hasShownWelcome = sessionStorage.getItem('hasShownWelcome')
 
         if (installed === 'true') {
-            // New installation - refresh data after a short delay to ensure webhook has completed
-            // This ensures the newly added repo is visible without manual page refresh
-            const hasRefreshed = sessionStorage.getItem('hasRefreshedAfterInstall')
-
-            if (!hasRefreshed) {
-                sessionStorage.setItem('hasRefreshedAfterInstall', 'true')
-                // Delay to allow webhook to process, then refresh server data
-                setTimeout(() => {
-                    router.refresh()
-                }, 1000)
-            }
-
-            if (!hasShownWelcome) {
-                success('Repository connected successfully! 🎉')
-                sessionStorage.setItem('hasShownWelcome', 'true')
-            }
-
-            // Clean URL
+            // Clean URL immediately to prevent re-triggering on manual refresh
             window.history.replaceState({}, '', '/dashboard')
-            // Clear the refresh flag after URL is cleaned so future installs work
-            sessionStorage.removeItem('hasRefreshedAfterInstall')
+
+            // Check if we've already handled this install session
+            const hasPolled = sessionStorage.getItem('hasPolledForInstall')
+            if (hasPolled) {
+                sessionStorage.removeItem('hasPolledForInstall')
+                return
+            }
+
+            // Start polling for new installations
+            setIsPollingForNewRepos(true)
+            const initialCount = initialInstallations.length
+            let pollCount = 0
+            const maxPolls = 20 // 10 seconds max (500ms x 20)
+
+            const pollInterval = setInterval(async () => {
+                pollCount++
+
+                try {
+                    const response = await fetch('/api/installations/list')
+                    if (!response.ok) throw new Error('Failed to fetch')
+
+                    const data = await response.json()
+
+                    // Check if new installations appeared
+                    if (data.count > initialCount || (initialCount === 0 && data.count > 0)) {
+                        // New repos detected - update state
+                        clearInterval(pollInterval)
+                        setIsPollingForNewRepos(false)
+                        setInstallations(data.installations)
+                        sessionStorage.setItem('hasPolledForInstall', 'true')
+
+                        if (!hasShownWelcome) {
+                            success('Repository connected successfully! 🎉')
+                            sessionStorage.setItem('hasShownWelcome', 'true')
+                        }
+                        return
+                    }
+
+                    // Timeout reached - show fallback message
+                    if (pollCount >= maxPolls) {
+                        clearInterval(pollInterval)
+                        setIsPollingForNewRepos(false)
+                        sessionStorage.setItem('hasPolledForInstall', 'true')
+
+                        // Update with whatever we have
+                        if (data.installations) {
+                            setInstallations(data.installations)
+                        }
+
+                        if (!hasShownWelcome) {
+                            warning('Repository may take a moment to appear. Refresh if needed.')
+                            sessionStorage.setItem('hasShownWelcome', 'true')
+                        }
+                    }
+                } catch (err) {
+                    // On error, continue polling (silent retry)
+                    if (pollCount >= maxPolls) {
+                        clearInterval(pollInterval)
+                        setIsPollingForNewRepos(false)
+                        sessionStorage.setItem('hasPolledForInstall', 'true')
+                        warning('Could not verify repository. Please refresh the page.')
+                    }
+                }
+            }, 500)
+
+            // Cleanup on unmount
+            return () => {
+                clearInterval(pollInterval)
+                setIsPollingForNewRepos(false)
+            }
         } else if (!hasShownWelcome) {
             // First visit to dashboard after login
             success(`Welcome back, ${displayName.split(' ')[0]}! 👋`)
             sessionStorage.setItem('hasShownWelcome', 'true')
         }
-    }, [searchParams, success, displayName, router])
+    }, [searchParams, success, warning, displayName, initialInstallations.length])
 
     // Logout handler with toast
     const handleLogout = useCallback(async () => {
@@ -537,20 +592,39 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                 {/* Repositories Section */}
                 {installations.length === 0 ? (
                     <div className="bg-gradient-to-br from-[#161b22] to-[#21262d] border border-white/5 rounded-2xl p-10 text-center">
-                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#21262d] to-[#30363d] flex items-center justify-center mx-auto mb-6 shadow-xl">
-                            <Github size={32} className="text-[#8b949e]" />
-                        </div>
-                        <h2 className="text-xl font-bold mb-2">No repositories yet</h2>
-                        <p className="text-[#8b949e] mb-8 max-w-sm mx-auto">
-                            Connect your first repository to start building your commit habit.
-                        </p>
-                        <a
-                            href={githubAppUrl}
-                            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#238636] to-[#2ea043] px-8 py-4 rounded-xl font-bold shadow-lg shadow-[#238636]/20 hover:shadow-[#238636]/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                            <Github size={20} />
-                            Connect Repository
-                        </a>
+                        {isPollingForNewRepos ? (
+                            <>
+                                {/* Loading state while waiting for webhook */}
+                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#238636]/20 to-[#39d353]/20 flex items-center justify-center mx-auto mb-6 shadow-xl animate-pulse">
+                                    <div className="w-10 h-10 border-3 border-[#39d353] border-t-transparent rounded-full animate-spin" />
+                                </div>
+                                <h2 className="text-xl font-bold mb-2">Connecting repository...</h2>
+                                <p className="text-[#8b949e] mb-4 max-w-sm mx-auto">
+                                    Setting up your repository. This usually takes a few seconds.
+                                </p>
+                                <div className="flex items-center justify-center gap-2 text-sm text-[#39d353]">
+                                    <span className="w-2 h-2 bg-[#39d353] rounded-full animate-pulse" />
+                                    Waiting for GitHub...
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#21262d] to-[#30363d] flex items-center justify-center mx-auto mb-6 shadow-xl">
+                                    <Github size={32} className="text-[#8b949e]" />
+                                </div>
+                                <h2 className="text-xl font-bold mb-2">No repositories yet</h2>
+                                <p className="text-[#8b949e] mb-8 max-w-sm mx-auto">
+                                    Connect your first repository to start building your commit habit.
+                                </p>
+                                <a
+                                    href={githubAppUrl}
+                                    className="inline-flex items-center gap-2 bg-gradient-to-r from-[#238636] to-[#2ea043] px-8 py-4 rounded-xl font-bold shadow-lg shadow-[#238636]/20 hover:shadow-[#238636]/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                >
+                                    <Github size={20} />
+                                    Connect Repository
+                                </a>
+                            </>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-4">
