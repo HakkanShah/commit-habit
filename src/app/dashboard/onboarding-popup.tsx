@@ -82,15 +82,6 @@ export function OnboardingPopup({ onClose }: OnboardingPopupProps) {
                 {/* Decorative gradient */}
                 <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#39d353]/10 to-transparent pointer-events-none" />
 
-                {/* Close button */}
-                <button
-                    onClick={handleClose}
-                    className="absolute top-4 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 text-[#8b949e] hover:text-white transition-all z-10"
-                    aria-label="Close"
-                >
-                    <X size={18} />
-                </button>
-
                 {/* Content */}
                 <div className="relative px-6 pt-10 pb-8 sm:px-8 sm:pt-12 sm:pb-10">
                     {/* Slide indicator */}

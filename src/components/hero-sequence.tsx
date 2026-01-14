@@ -56,7 +56,7 @@ export function HeroSequence() {
                     transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
                     className="flex items-center justify-center"
                 >
-                    <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-wide text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 flex flex-wrap items-center justify-center gap-y-2">
+                    <h1 className="text-[2.5rem] sm:text-7xl lg:text-8xl font-black tracking-wide text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 flex items-center justify-center whitespace-nowrap">
                         <span>C</span>
                         <motion.img
                             src="/logo.png"
@@ -85,7 +85,43 @@ export function HeroSequence() {
                         />
                         <span>mmit</span>
                         <span className="w-[0.2em] sm:w-[0.3em] inline-block"></span>
-                        <span className="text-[#39d353] drop-shadow-[0_0_30px_rgba(57,211,83,0.3)]">Habit</span>
+                        <span className="relative inline-flex flex-col items-center">
+                            {/* Beta Badge */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
+                                className="absolute top-1 -right-8 sm:top-0 sm:-right-10 group cursor-pointer"
+                            >
+                                <div className="relative rounded-full p-[1px] overflow-hidden">
+                                    <div className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0deg,#ffffff_180deg,transparent_360deg)] animate-[spin_4s_linear_infinite]" />
+                                    <div className="relative flex items-center justify-center px-1.5 py-[1px] sm:px-2 sm:py-0.5 rounded-full bg-[#0d1117] backdrop-blur-sm">
+                                        <span className="text-[8px] sm:text-[10px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] to-[#a371f7] tracking-[0.15em] leading-none uppercase">
+                                            Beta
+                                        </span>
+                                    </div>
+                                </div>
+                                {/* Hover Tooltip */}
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-50 scale-95 group-hover:scale-100">
+                                    {/* Tooltip Arrow */}
+                                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#1c2128] border-l border-t border-[#58a6ff]/30 rotate-45"></div>
+
+                                    {/* Tooltip Content */}
+                                    <div className="relative px-4 py-3 bg-gradient-to-br from-[#1c2128] to-[#161b22] border border-[#58a6ff]/20 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl whitespace-nowrap">
+                                        {/* Gradient accent line */}
+                                        <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#58a6ff]/50 to-transparent"></div>
+
+                                        <p className="text-xs sm:text-sm text-white font-semibold mb-1">
+                                            Beta Testing
+                                        </p>
+                                        <p className="text-[10px] sm:text-xs text-[#8b949e]">
+                                            Try it out & share your feedback!
+                                        </p>
+                                    </div>
+                                </div>
+                            </motion.div>
+                            <span className="text-[#39d353] drop-shadow-[0_0_30px_rgba(57,211,83,0.3)]">Habit</span>
+                        </span>
                     </h1>
                 </motion.div>
 
