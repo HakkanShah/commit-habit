@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { DashboardClient } from './dashboard-client'
 
 // ⚠️ DEV ONLY: Set to true to bypass login for UI testing (MUST be false in production!)
-const BYPASS_AUTH = false
+const BYPASS_AUTH = true
 
 // Mock data for testing when BYPASS_AUTH is true
 const MOCK_USER = {
@@ -58,7 +58,7 @@ const MOCK_INSTALLATIONS: MockInstallation[] = [
 
 // Props type for search params
 interface PageProps {
-    searchParams: Promise<{ empty?: string; status?: string; installed?: string; testMode?: string }>
+    searchParams: Promise<{ empty?: string; status?: string; installed?: string; testMode?: string; onboarding?: string }>
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
@@ -145,6 +145,17 @@ export default async function DashboardPage({ searchParams }: PageProps) {
                             className="px-3 py-1.5 rounded-md transition-all text-xs font-bold bg-[#238636] text-white hover:bg-[#2ea043]"
                         >
                             2. Add Repo → Refresh
+                        </a>
+                    </div>
+
+                    {/* Test onboarding popup */}
+                    <div className="flex gap-3 items-center border-t border-white/10 pt-2">
+                        <p className="text-[#8b949e] font-medium mr-1">🎯 Onboarding:</p>
+                        <a
+                            href="/dashboard?empty=true&onboarding=true"
+                            className="px-3 py-1.5 rounded-md transition-all text-xs font-bold bg-[#a371f7] text-black hover:bg-[#d2a8ff]"
+                        >
+                            Test Popup
                         </a>
                     </div>
                 </div>

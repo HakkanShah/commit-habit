@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRight, ChevronDown, Zap, Activity, TrendingUp, BarChart3, X } from 'lucide-react'
 import { InstallationCard } from './installation-card'
 import { WelcomeAnimation } from './WelcomeAnimation'
+import { OnboardingPopup } from './onboarding-popup'
 import { useToast } from '@/components/toast'
 import { apiFetch } from '@/lib/api-client'
 import Link from 'next/link'
@@ -71,6 +72,9 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
 
     // State for polling when waiting for new installations
     const [isPollingForNewRepos, setIsPollingForNewRepos] = useState(false)
+
+    // State for onboarding popup (shown to new users)
+    const [showOnboarding, setShowOnboarding] = useState(false)
 
     // Poll for new installations after GitHub App install/update
     // This replaces the unreliable single refresh approach
@@ -162,6 +166,27 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
             // First visit to dashboard after login
             success(`Welcome back, ${displayName.split(' ')[0]}! 👋`)
             sessionStorage.setItem('hasShownWelcome', 'true')
+
+            // Show onboarding for new users who have no repos yet
+            const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding')
+            if (!hasSeenOnboarding && initialInstallations.length === 0) {
+                // Delay to let welcome toast appear first
+                setTimeout(() => {
+                    setShowOnboarding(true)
+                }, 1500)
+            }
+        }
+
+        // Handle test mode: force show onboarding when ?onboarding=true
+        const forceOnboarding = searchParams.get('onboarding')
+        if (forceOnboarding === 'true') {
+            // Clear stored flags for testing
+            localStorage.removeItem('hasSeenOnboarding')
+            sessionStorage.removeItem('hasShownWelcome')
+            // Show onboarding after a short delay
+            setTimeout(() => {
+                setShowOnboarding(true)
+            }, 500)
         }
     }, [searchParams, success, warning, displayName, initialInstallations.length])
 
@@ -724,7 +749,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                 // Calculate analytics data
                 const totalCommitsToday = installations.reduce((sum, i) => sum + i.commitsToday, 0)
                 const totalActivities = installations.reduce((sum, i) => sum + i.activityLogs.length, 0)
-                const maxCommitsPerDay = 5 * activeCount
+                const maxCommitsPerDay = 4 * activeCount
                 const utilizationRate = maxCommitsPerDay > 0 ? Math.round((totalCommitsToday / maxCommitsPerDay) * 100) : 0
                 const pausedCount = totalCount - activeCount
                 const activePercent = totalCount > 0 ? (activeCount / totalCount) * 100 : 0
@@ -1021,7 +1046,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                         </div>
                                         {proTipOpen && (
                                             <p className="text-xs text-[#8b949e] mt-3 leading-relaxed">
-                                                Each repo can have up to 5 automated commits/day. The cron runs every 6 hours.
+                                                Each repo can have up to 4 automated commits/day. The cron runs every 6 hours.
                                             </p>
                                         )}
                                     </div>
@@ -1031,6 +1056,16 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                     </div>
                 )
             })()}
+
+            {/* Onboarding Popup for new users */}
+            {showOnboarding && (
+                <OnboardingPopup
+                    onClose={() => {
+                        setShowOnboarding(false)
+                        localStorage.setItem('hasSeenOnboarding', 'true')
+                    }}
+                />
+            )}
         </div>
     )
 }

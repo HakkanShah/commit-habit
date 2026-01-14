@@ -22,7 +22,7 @@ import {
 // ============================================================================
 
 const CRON_SECRET = process.env.CRON_SECRET
-const MAX_COMMITS_PER_DAY = 5
+const MAX_COMMITS_PER_DAY = 4
 const CRON_TIMEOUT_MS = 25000 // 25 seconds (cron-job.org has 30s limit)
 const MAX_CONCURRENT_INSTALLATIONS = 5 // Process up to 5 installations in parallel
 
