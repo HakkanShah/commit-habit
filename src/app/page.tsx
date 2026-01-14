@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { HeroSequence } from '@/components/hero-sequence'
 import { ErrorBanner } from '@/components/error-banner'
+import { TestimonialsSection } from '@/components/testimonials-section'
 
 // Lazy load heavy components for better initial load performance
 const AnimatedTerminal = dynamic(() => import('@/components/animated-terminal').then(mod => ({ default: mod.AnimatedTerminal })), {
@@ -190,6 +191,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Testimonials Section */}
+        <TestimonialsSection />
 
         <section className="relative py-24 lg:py-32 overflow-hidden">
           <div className="absolute inset-x-0 bottom-0 h-[600px] bg-gradient-to-t from-[#238636]/10 via-[#238636]/5 to-transparent pointer-events-none" />
