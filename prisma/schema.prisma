@@ -16,6 +16,22 @@ model User {
   updatedAt     DateTime       @updatedAt
   installations Installation[]
   accounts      Account[]
+  testimonials  Testimonial[]
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String   // Testimonial text (max ~280 chars recommended)
+  rating    Int      @default(5) // 1-5 star rating
+  approved  Boolean  @default(false) // Admin approval for moderation
+  featured  Boolean  @default(false) // Featured on homepage
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([approved, featured])
 }
 
 model Account {
