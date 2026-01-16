@@ -1,142 +1,173 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { motion, useAnimationControls } from 'framer-motion'
-import { Star, MessageSquare, ArrowRight, Sparkles, Quote } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Star, Sparkles, Quote, Github, X, Loader2 } from 'lucide-react'
+import { useToast } from './toast'
 
-// Mock testimonials data (will be replaced with API data in Phase 2)
-const MOCK_TESTIMONIALS = [
+// Import Font (We'll load it via style tag for simplicity in this component)
+// Google Font: Permanent Marker
+
+const MOCK_TESTIMONIALS: Testimonial[] = [
     {
         id: '1',
-        userName: 'Alex Chen',
-        role: 'Full Stack Developer',
-        avatarUrl: null,
-        content: "Commit Habit saved my streak multiple times! Love how it just works in the background without any hassle.",
+        userName: 'Hakkan Shah',
+
+        githubUsername: 'hakkanshah',
+        content: "I build this shit and this shit is a dope.",
+        rating: 5,
+    },
+    {
+        id: '9',
+        userName: 'Janmejoy',
+
+        githubUsername: 'janmej0y',
+        content: "Clean, invisible, and efficient. Exactly how developer tools should be.",
         rating: 5,
     },
     {
         id: '2',
-        userName: 'Sarah Miller',
-        role: 'Frontend Engineer',
-        avatarUrl: null,
-        content: "Perfect for developers who code daily but sometimes forget to commit. Simple, effective, and secure.",
+        userName: 'Suman Karmakar',
+
+        githubUsername: 'SumanKarmakar467',
+        content: "Perfect for developers who code daily but sometimes forget to push.",
         rating: 5,
     },
     {
         id: '3',
         userName: 'Dev Kumar',
-        role: 'Software Engineer',
-        avatarUrl: null,
-        content: "I was skeptical at first, but this actually works great. My GitHub graph has never looked better!",
+
+        githubUsername: 'devkumar',
+        content: "My GitHub graph has never looked better! Highly recommended.",
         rating: 4,
     },
     {
         id: '4',
-        userName: 'Emma Wilson',
-        role: 'DevOps Engineer',
-        avatarUrl: null,
-        content: "The fact that it's open source and uses official GitHub App integration made me trust it. Highly recommend!",
+        userName: 'Sourav Chowdhury',
+
+        githubUsername: 'sourav81R',
+        content: "Official GitHub App integration made me trust it. Great security!",
         rating: 5,
     },
     {
         id: '5',
-        userName: 'James Park',
-        role: 'Backend Developer',
-        avatarUrl: null,
-        content: "Been using it for a month now. Zero issues, my streak is protected, and I can focus on actual coding.",
-        rating: 5,
+        userName: 'Justin Pratik',
+
+        githubUsername: 'pratikdas018',
+        content: "Zero issues after a month. My streak is always protected.",
+        rating: 4,
     },
     {
         id: '6',
-        userName: 'Lisa Zhang',
-        role: 'Mobile Developer',
-        avatarUrl: null,
-        content: "Finally, a streak keeper that doesn't require personal access tokens. This is how it should be done!",
+        userName: 'Avisekh Giri',
+
+        githubUsername: 'imavishek-coder',
+        content: "No personal access tokens needed! Security is top notch.",
         rating: 5,
     },
     {
         id: '7',
-        userName: 'Marcus Johnson',
-        role: 'Tech Lead',
-        avatarUrl: null,
-        content: "Recommended this to my entire team. We're all using it now and our contribution graphs look amazing!",
+        userName: 'Shankha Shubhra',
+
+        githubUsername: 'Shankha-Shubhra',
+        content: "Recommended this to my entire team. Everyone loves it!",
         rating: 5,
     },
     {
         id: '8',
-        userName: 'Priya Sharma',
-        role: 'Open Source Contributor',
-        avatarUrl: null,
-        content: "As someone who contributes to multiple repos, this is a lifesaver. My streak stays green effortlessly.",
-        rating: 5,
-    },
+        userName: 'Debjyoti Chowdhury',
+
+        githubUsername: 'debjyoti',
+        content: "The best tool for maintaining consistency. A must-have for every serious dev.",
+        rating: 4,
+    }
 ]
 
-interface TestimonialCardProps {
+// Testimonial type for both mock and real data
+interface Testimonial {
+    id: string
     userName: string
-    role: string
-    avatarUrl: string | null
+    githubUsername: string
     content: string
     rating: number
 }
 
-function TestimonialCard({ userName, role, avatarUrl, content, rating }: TestimonialCardProps) {
-    // Generate a consistent gradient based on username
-    const gradients = [
-        'from-[#238636] to-[#39d353]',
-        'from-[#58a6ff] to-[#a371f7]',
-        'from-[#d29922] to-[#f0b800]',
-        'from-[#f778ba] to-[#ff6b6b]',
-        'from-[#79c0ff] to-[#58a6ff]',
-    ]
-    const gradientIndex = userName.charCodeAt(0) % gradients.length
+function BrickCard({ testimonial, index }: { testimonial: Testimonial, index: number }) {
+    // Deterministic rotation and scale for that "organic patch" feel
+    const randomRotate = ((index * 137) % 10 - 5); // -5 to 5 degree
+    const randomScale = 0.95 + ((index * 79) % 10) / 100; // 0.95 to 1.05
 
     return (
-        <div className="group relative w-[260px] sm:w-[300px] flex-shrink-0 p-4 sm:p-5 bg-gradient-to-br from-[#161b22] to-[#0d1117] border border-white/10 rounded-xl overflow-hidden transition-all duration-300 hover:border-[#58a6ff]/40 hover:shadow-[0_0_30px_rgba(88,166,255,0.15)] hover:-translate-y-1">
-            {/* Quote icon background */}
-            <Quote className="absolute top-3 right-3 w-8 h-8 text-[#21262d]/50 transform rotate-180" />
+        <div
+            className="relative w-[340px] md:w-[380px] flex-shrink-0 mx-[-10px] h-[260px] group flex items-center justify-center"
+            style={{
+                transform: `rotate(${randomRotate}deg) scale(${randomScale})`,
+                zIndex: index % 2 === 0 ? 1 : 2,
+                backgroundImage: `url('/wall-hole.png')`,
+                backgroundSize: '100% 100%',
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+            }}
+        >
+            {/* Content - "Painted" inside the wall hole */}
+            {/* Adjusted Width/Height to fit inside the 'hole' of the image */}
+            {/* Content - "Painted" inside the wall hole */}
+            {/* Horizontal Layout: Profile Left, Content Right */}
+            <div className="relative z-10 w-[80%] h-[75%] flex flex-row items-center gap-4 font-['Permanent_Marker'] tracking-wide text-left mt-1 group-hover:scale-105 transition-transform duration-300">
 
-            {/* Shine effect on hover */}
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-            </div>
+                {/* Dark Overlay for Readability */}
+                <div className="absolute inset-0 bg-black/60 blur-[20px] rounded-full -z-10 scale-125"></div>
 
-            {/* Top gradient line */}
-            <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#58a6ff]/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-            <div className="relative z-10">
-                {/* Rating Stars */}
-                <div className="flex gap-1 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                        <Star
-                            key={i}
-                            size={14}
-                            className={`transition-all duration-300 ${i < rating
-                                ? 'text-[#d29922] fill-[#d29922] group-hover:scale-110'
-                                : 'text-[#30363d]'
-                                }`}
-                            style={{ transitionDelay: `${i * 50}ms` }}
+                {/* Left Side: Avatar */}
+                <div className="flex-shrink-0 ml-2">
+                    <div className="p-1 rounded-full bg-white/10 shadow-lg rotate-[-2deg]">
+                        <img
+                            src={`https://github.com/${testimonial.githubUsername}.png`}
+                            alt={testimonial.userName}
+                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-full grayscale contrast-125 border-2 border-white/20"
                         />
-                    ))}
+                    </div>
                 </div>
 
-                {/* Testimonial content */}
-                <p className="text-[#c9d1d9] text-xs sm:text-sm leading-relaxed mb-4 min-h-[60px]">
-                    "{content}"
-                </p>
-
-                {/* Author info */}
-                <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradients[gradientIndex]} flex items-center justify-center text-white font-bold text-xs shadow-lg`}>
-                        {avatarUrl ? (
-                            <img src={avatarUrl} alt={userName} className="w-full h-full rounded-full object-cover" />
-                        ) : (
-                            userName.charAt(0).toUpperCase()
-                        )}
+                {/* Right Side: Info & Review */}
+                <div className="flex flex-col min-w-0 flex-1 pr-2">
+                    {/* Header */}
+                    <div className="flex flex-col items-start mb-1">
+                        <h3 className="text-[#f2cc60] text-xl sm:text-2xl leading-none drop-shadow-[2px_2px_0_rgba(0,0,0,1)] tracking-wider">
+                            {testimonial.userName}
+                        </h3>
+                        <a
+                            href={`https://github.com/${testimonial.githubUsername}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#58a6ff] text-xs mt-0.5 hover:text-white transition-colors drop-shadow-[1px_1px_0_black]"
+                        >
+                            @{testimonial.githubUsername}
+                        </a>
                     </div>
-                    <div>
-                        <p className="text-white font-semibold text-sm">{userName}</p>
-                        <p className="text-[#8b949e] text-xs">{role}</p>
+
+                    {/* Review Text */}
+                    <div className="relative mb-1">
+                        <p className="text-white text-[12px] sm:text-[13px] leading-tight drop-shadow-[0_2px_0_rgba(0,0,0,1)] line-clamp-3">
+                            <span style={{ textShadow: '2px 2px 0 #000' }}>
+                                "{testimonial.content}"
+                            </span>
+                        </p>
+                    </div>
+
+                    {/* Footer: Stars */}
+                    <div className="flex items-center gap-1 opacity-100">
+                        {[...Array(5)].map((_, i) => (
+                            <Star
+                                key={i}
+                                size={14}
+                                className={i < testimonial.rating
+                                    ? "text-[#f2cc60] fill-[#f2cc60] drop-shadow-[0_2px_0_rgba(0,0,0,1)]"
+                                    : "text-gray-600 fill-gray-800"
+                                }
+                                strokeWidth={2}
+                            />
+                        ))}
                     </div>
                 </div>
             </div>
@@ -144,207 +175,349 @@ function TestimonialCard({ userName, role, avatarUrl, content, rating }: Testimo
     )
 }
 
-// Marquee component for infinite scrolling
-function Marquee({ children, direction = 'left', speed = 30, mobileSpeed = 15 }: { children: React.ReactNode, direction?: 'left' | 'right', speed?: number, mobileSpeed?: number }) {
-    const containerRef = useRef<HTMLDivElement>(null)
-    const [isPaused, setIsPaused] = useState(false)
-    const [isMobile, setIsMobile] = useState(false)
-
-    useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 640)
-        checkMobile()
-        window.addEventListener('resize', checkMobile)
-        return () => window.removeEventListener('resize', checkMobile)
-    }, [])
-
-    const duration = isMobile ? mobileSpeed : speed
-
+function CssMarquee({ items, direction = 'left', speed = '40s', className }: { items: Testimonial[], direction?: 'left' | 'right', speed?: string, className?: string }) {
     return (
-        <div
-            ref={containerRef}
-            className="relative overflow-hidden"
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            onTouchStart={() => setIsPaused(true)}
-            onTouchEnd={() => setIsPaused(false)}
-        >
-            <motion.div
-                className="flex gap-4 sm:gap-6"
-                animate={{
-                    x: direction === 'left' ? ['0%', '-50%'] : ['-50%', '0%'],
-                }}
-                transition={{
-                    x: {
-                        duration: duration,
-                        repeat: Infinity,
-                        ease: 'linear',
-                    },
-                }}
-                style={{
-                    animationPlayState: isPaused ? 'paused' : 'running',
-                }}
+        <div className={`flex overflow-hidden group ${className}`} style={{ maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)' }}>
+            <div
+                className={`flex gap-0 w-max shrink-0 hover:[animation-play-state:paused] ${direction === 'left' ? 'animate-marquee-left' : 'animate-marquee-right'}`}
+                style={{ animationDuration: speed }}
             >
-                {children}
-                {children}
-            </motion.div>
+                {[...items, ...items, ...items].map((testimonial, i) => (
+                    <div key={`${testimonial.id}-${i}`} className="py-2">
+                        <BrickCard testimonial={testimonial} index={i} />
+                    </div>
+                ))}
+            </div>
+            <style jsx global>{`
+                @keyframes marquee-left {
+                    from { transform: translateX(0); }
+                    to { transform: translateX(-33.33%); }
+                }
+                @keyframes marquee-right {
+                     from { transform: translateX(-33.33%); }
+                    to { transform: translateX(0); }
+                }
+                .animate-marquee-left {
+                    animation: marquee-left linear infinite;
+                }
+                .animate-marquee-right {
+                    animation: marquee-right linear infinite;
+                }
+            `}</style>
         </div>
     )
 }
 
 export function TestimonialsSection() {
-    const [isLoggedIn, setIsLoggedIn] = useState(false)
-    const [hasRepos, setHasRepos] = useState(false)
-    const [isChecking, setIsChecking] = useState(true)
+    const { success, error } = useToast()
 
-    // Check user auth status and repos
+    // Testimonials from database
+    const [testimonials, setTestimonials] = useState<Testimonial[]>(MOCK_TESTIMONIALS)
+
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [feedbackText, setFeedbackText] = useState('')
+    const [rating, setRating] = useState(5)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [authError, setAuthError] = useState(false)
+
+    // Existing feedback state
+    const [hasExistingFeedback, setHasExistingFeedback] = useState(false)
+
+    // Auth state
+    const [isLoggedIn, setIsLoggedIn] = useState(false)
+    const [isCheckingSession, setIsCheckingSession] = useState(true)
+    const [user, setUser] = useState<{ login?: string; id?: string; name?: string } | null>(null)
+
+    // Fetch testimonials on mount
     useEffect(() => {
-        const checkUserStatus = async () => {
+        const fetchTestimonials = async () => {
             try {
-                const authRes = await fetch('/api/auth/me')
-                if (authRes.ok) {
-                    const authData = await authRes.json()
-                    if (authData.user) {
+                const res = await fetch('/api/feedback')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.testimonials && data.testimonials.length > 0) {
+                        setTestimonials([...data.testimonials, ...MOCK_TESTIMONIALS])
+                    }
+                }
+            } catch {
+                // Use mock data on error
+            }
+        }
+        fetchTestimonials()
+    }, [])
+
+    // Check session and existing feedback on mount
+    useEffect(() => {
+        const checkSessionAndFeedback = async () => {
+            try {
+                const res = await fetch('/api/auth/me')
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.user) {
                         setIsLoggedIn(true)
-                        const installRes = await fetch('/api/installations')
-                        if (installRes.ok) {
-                            const installData = await installRes.json()
-                            setHasRepos(installData.installations?.length > 0)
+                        setUser(data.user)
+
+                        // Check for existing feedback
+                        const feedbackRes = await fetch('/api/feedback/me')
+                        if (feedbackRes.ok) {
+                            const feedbackData = await feedbackRes.json()
+                            if (feedbackData.hasFeedback && feedbackData.feedback) {
+                                setHasExistingFeedback(true)
+                                setFeedbackText(feedbackData.feedback.content)
+                                setRating(feedbackData.feedback.rating)
+                            }
                         }
                     }
                 }
             } catch {
-                // Silently fail
+                // User is not logged in
             } finally {
-                setIsChecking(false)
+                setIsCheckingSession(false)
             }
         }
-        checkUserStatus()
+        checkSessionAndFeedback()
     }, [])
 
-    const getButtonState = () => {
-        if (isChecking) {
-            return { text: 'Loading...', disabled: true, subtext: null }
+    // Handle submit
+    const handleSubmit = async () => {
+        if (!feedbackText.trim()) {
+            error('Please write some feedback!')
+            return
         }
+
         if (!isLoggedIn) {
-            return {
-                text: 'Add Your Feedback',
-                disabled: true,
-                subtext: 'Use Commit Habit first, then share your feedback!'
-            }
+            setAuthError(true)
+            return
         }
-        if (!hasRepos) {
-            return {
-                text: 'Add Your Feedback',
-                disabled: true,
-                subtext: 'Connect a repo first to leave feedback'
+
+        setIsSubmitting(true)
+        try {
+            const res = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: feedbackText, rating })
+            })
+
+            if (res.ok) {
+                const data = await res.json()
+                success(hasExistingFeedback ? 'Feedback updated! 🎉' : 'Thanks for your feedback! 🎉')
+                setIsModalOpen(false)
+                setAuthError(false)
+                setHasExistingFeedback(true) // Now they have feedback
+
+                // Refresh testimonials to show the new one
+                const testimonialsRes = await fetch('/api/feedback')
+                if (testimonialsRes.ok) {
+                    const testimonialsData = await testimonialsRes.json()
+                    if (testimonialsData.testimonials && testimonialsData.testimonials.length > 0) {
+                        setTestimonials([...testimonialsData.testimonials, ...MOCK_TESTIMONIALS])
+                    }
+                }
+            } else {
+                const data = await res.json()
+                error(data.error || 'Failed to submit feedback')
             }
-        }
-        return {
-            text: 'Add Your Feedback',
-            disabled: true,
-            subtext: 'Coming soon!'
+        } catch {
+            error('Something went wrong. Please try again.')
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
-    const buttonState = getButtonState()
-
-    // Split testimonials into two rows
-    const row1 = MOCK_TESTIMONIALS.slice(0, 4)
-    const row2 = MOCK_TESTIMONIALS.slice(4, 8)
-
     return (
-        <section className="relative py-16 lg:py-24 overflow-hidden">
-            {/* Background accents */}
-            <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#58a6ff]/5 blur-[150px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-[#a371f7]/5 blur-[120px] rounded-full pointer-events-none" />
+        <section className="relative py-24 overflow-hidden bg-[#0d1117]">
+            <style jsx global>{`
+                @import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
+            `}</style>
 
-            {/* Section Header */}
-            <div className="relative max-w-6xl mx-auto px-4 z-10 mb-12">
+            {/* Feedback Modal */}
+            <AnimatePresence>
+                {isModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+                        onClick={() => setIsModalOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                            className="relative w-full max-w-md p-6 rounded-2xl border border-white/10 shadow-2xl font-['Permanent_Marker']"
+                            style={{
+                                backgroundImage: `url('/brick-wall.png')`,
+                                backgroundSize: '200px',
+                                backgroundPosition: 'center',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Dark Overlay for Readability */}
+                            <div className="absolute inset-0 bg-black/60 rounded-2xl pointer-events-none"></div>
+
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="absolute top-3 right-3 z-20 text-white/60 hover:text-white transition-colors cursor-pointer"
+                            >
+                                <X size={24} />
+                            </button>
+
+                            {/* Modal Content */}
+                            <div className="relative z-10">
+                                <h3 className="text-2xl text-[#f2cc60] text-center mb-4 drop-shadow-[2px_2px_0_#000]">
+                                    {hasExistingFeedback ? 'MODIFY YOUR WALL' : 'ADD YOUR WALL'}
+                                </h3>
+
+                                {/* Auth Error Message */}
+                                {authError && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="mb-4 p-3 bg-[#f85149]/20 border border-[#f85149]/50 rounded-lg text-center"
+                                    >
+                                        <p className="text-white text-sm mb-2">
+                                            Connect with GitHub to submit your review!
+                                        </p>
+                                        <a
+                                            href="/api/auth/github"
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#238636] text-white text-sm rounded-lg hover:bg-[#2ea043] transition-colors"
+                                        >
+                                            <Github size={16} />
+                                            Connect with GitHub
+                                        </a>
+                                    </motion.div>
+                                )}
+
+                                {/* Star Rating */}
+                                <div className="flex justify-center gap-2 mb-4">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            onClick={() => setRating(star)}
+                                            className="cursor-pointer transition-transform hover:scale-110"
+                                        >
+                                            <Star
+                                                size={28}
+                                                className={star <= rating
+                                                    ? "text-[#f2cc60] fill-[#f2cc60] drop-shadow-[0_2px_0_rgba(0,0,0,1)]"
+                                                    : "text-gray-600 fill-gray-800"
+                                                }
+                                                strokeWidth={2}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Feedback Textarea */}
+                                <textarea
+                                    value={feedbackText}
+                                    onChange={(e) => setFeedbackText(e.target.value)}
+                                    placeholder="Write your feedback here..."
+                                    maxLength={100}
+                                    className="w-full h-32 p-3 bg-black/40 border border-white/20 rounded-lg text-white placeholder:text-white/40 resize-none focus:outline-none focus:border-[#f2cc60]/50 transition-colors"
+                                />
+                                <p className="text-right text-xs text-white/40 mt-1">
+                                    {feedbackText.length}/100
+                                </p>
+
+                                {/* Submit Button */}
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting}
+                                    className="w-full mt-4 py-3 bg-[#238636] text-white text-lg rounded-lg hover:bg-[#2ea043] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 size={20} className="animate-spin" />
+                                            {hasExistingFeedback ? 'Updating...' : 'Submitting...'}
+                                        </>
+                                    ) : (
+                                        hasExistingFeedback ? 'Update Feedback' : 'Submit Feedback'
+                                    )}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Background Texture for the Whole Wall Section */}
+            <div
+                className="absolute inset-0 pointer-events-none opacity-30"
+                style={{
+                    backgroundImage: `url('/brick-wall.png')`, // Reuse texture for the background wall too for blending
+                    backgroundSize: '400px',
+                    filter: 'grayscale(100%) contrast(120%) brightness(50%)'
+                }}
+            />
+            {/* Vignette & Ambient Light */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0d1117_90%)] pointer-events-none" />
+
+
+
+            <div className="relative z-10 w-full">
+                {/* Header */}
+                <div className="text-center mb-16 max-w-2xl mx-auto px-6">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="font-['Permanent_Marker']"
+                    >
+                        <h2 className="text-4xl sm:text-6xl text-white mb-4 drop-shadow-[0_4px_0_#000]">
+                            {/* Stencil Style Effect on Title */}
+                            <span className="relative inline-block">
+                                <span className="absolute inset-0 transform translate-x-1 translate-y-1 text-black blur-[1px]">WALL OF LOVE</span>
+                                <span className="relative text-[#e6edf3]">WALL OF LOVE</span>
+                            </span>
+                        </h2>
+                        <p className="text-xl text-[#8b949e] drop-shadow-md">
+                            Join thousands of developers who are consistently shipping code.
+                        </p>
+                    </motion.div>
+                </div>
+
+                {/* Marquee Container */}
+                <div className="flex flex-col gap-[-20px]">
+                    {/* Desktop: Two Opposing Rows */}
+                    <div className="hidden md:flex flex-col gap-0">
+                        <CssMarquee items={testimonials.slice(0, Math.ceil(testimonials.length / 2))} direction="left" speed="60s" />
+                        <CssMarquee items={testimonials.slice(Math.ceil(testimonials.length / 2))} direction="right" speed="60s" />
+                    </div>
+
+                    {/* Mobile: Single Unified Row */}
+                    <div className="md:hidden">
+                        <CssMarquee items={testimonials} direction="left" speed="45s" />
+                    </div>
+                </div>
+
+                {/* Call to Action */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-center"
+                    className="mt-20 flex justify-center px-6 font-['Permanent_Marker']"
                 >
-                    <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#58a6ff]/10 border border-[#58a6ff]/20 text-[#58a6ff] text-xs font-mono mb-6 backdrop-blur-sm">
-                        <MessageSquare size={12} />
-                        Community Feedback
-                    </span>
-                    <h2 className="text-3xl lg:text-5xl font-black tracking-tight mb-4">
-                        What Developers <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] to-[#a371f7]">Say</span>
-                    </h2>
-                    <p className="text-[#8b949e] max-w-xl mx-auto text-lg">
-                        Join hundreds of developers who trust Commit Habit to protect their GitHub streaks.
-                    </p>
+                    <button
+                        onClick={() => setIsModalOpen(true)}
+                        className="relative px-8 py-3 sm:px-10 sm:py-3.5 text-white text-lg sm:text-xl tracking-widest hover:scale-105 hover:-translate-y-1 hover:shadow-cyan-500/20 transition-all duration-300 rotate-[-1deg] group rounded-full overflow-hidden border-2 border-white/10 shadow-[0_10px_20px_rgba(0,0,0,0.5)] cursor-pointer"
+                        style={{
+                            backgroundImage: `url('/brick-wall.png')`,
+                            backgroundSize: '150px',
+                            backgroundPosition: 'center',
+                        }}
+                    >
+                        {/* Darken Overlay */}
+                        <div className="absolute inset-0 bg-black/50 group-hover:bg-black/30 transition-colors duration-300 pointer-events-none"></div>
+
+                        {/* Button Text */}
+                        <span className="relative z-10 drop-shadow-[2px_2px_0_#000] text-[#f2cc60] whitespace-nowrap">ADD YOUR WALL</span>
+                    </button>
                 </motion.div>
             </div>
-
-            {/* Testimonials Marquee - Row 1 */}
-            <div className="relative max-w-6xl mx-auto px-4 mb-6 overflow-hidden">
-                {/* Fade edges */}
-                <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-[#0d1117] to-transparent z-10 pointer-events-none" />
-                <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-l from-[#0d1117] to-transparent z-10 pointer-events-none" />
-
-                <Marquee direction="left" speed={35} mobileSpeed={18}>
-                    {row1.map((testimonial) => (
-                        <TestimonialCard
-                            key={testimonial.id}
-                            userName={testimonial.userName}
-                            role={testimonial.role}
-                            avatarUrl={testimonial.avatarUrl}
-                            content={testimonial.content}
-                            rating={testimonial.rating}
-                        />
-                    ))}
-                </Marquee>
-            </div>
-
-            {/* Testimonials Marquee - Row 2 (opposite direction) - Hidden on mobile */}
-            <div className="relative max-w-6xl mx-auto px-4 mb-8 sm:mb-12 hidden sm:block overflow-hidden">
-                {/* Fade edges */}
-                <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[#0d1117] to-transparent z-10 pointer-events-none" />
-                <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[#0d1117] to-transparent z-10 pointer-events-none" />
-
-                <Marquee direction="right" speed={40} mobileSpeed={20}>
-                    {row2.map((testimonial) => (
-                        <TestimonialCard
-                            key={testimonial.id}
-                            userName={testimonial.userName}
-                            role={testimonial.role}
-                            avatarUrl={testimonial.avatarUrl}
-                            content={testimonial.content}
-                            rating={testimonial.rating}
-                        />
-                    ))}
-                </Marquee>
-            </div>
-
-            {/* Add Feedback CTA */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="relative max-w-6xl mx-auto px-4 z-10 text-center"
-            >
-                <div className="inline-flex flex-col items-center gap-3">
-                    <button
-                        disabled={buttonState.disabled}
-                        className={`group flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-300 ${buttonState.disabled
-                            ? 'bg-[#21262d] text-[#8b949e] cursor-not-allowed'
-                            : 'bg-gradient-to-r from-[#238636] to-[#2ea043] text-white hover:shadow-[0_0_30px_rgba(57,211,83,0.3)] hover:scale-105'
-                            }`}
-                    >
-                        <Sparkles size={18} className={buttonState.disabled ? 'text-[#484f58]' : 'text-white'} />
-                        <span>{buttonState.text}</span>
-                        {!buttonState.disabled && <ArrowRight size={18} />}
-                    </button>
-                    {buttonState.subtext && (
-                        <p className="text-xs text-[#8b949e]">
-                            {buttonState.subtext}
-                        </p>
-                    )}
-                </div>
-            </motion.div>
         </section>
     )
 }
