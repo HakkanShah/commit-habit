@@ -108,11 +108,10 @@ export function ContributionDemo() {
                                         initial={false}
                                         animate={{
                                             backgroundColor: LEVELS[level],
-                                            scale: mode === 'after' && level > 0 ? [1, 1.2, 1] : 1,
                                         }}
                                         transition={{
-                                            backgroundColor: { duration: 0.8, ease: "easeInOut" },
-                                            scale: { duration: 0.4, delay: Math.random() * 0.2 + 0.2 } // Random "pop" effect
+                                            duration: 0.4,
+                                            ease: "easeOut"
                                         }}
                                         className="w-3 h-3 sm:w-4 sm:h-4 rounded-[2px]"
                                     />

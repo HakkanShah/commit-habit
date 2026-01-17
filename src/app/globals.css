@@ -340,3 +340,97 @@ html::-webkit-scrollbar {
     font-size: 0.9rem;
     color: #c9d1d9;
 }
+
+/* =============================================================================
+   Performance Optimizations
+   ============================================================================= */
+
+/* GPU Acceleration for smooth animations */
+.gpu-accelerate {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Content visibility for off-screen sections - improves initial render */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* Optimize paint for fixed/animated elements */
+.optimize-paint {
+  contain: layout style paint;
+}
+
+/* Touch optimization for mobile */
+@media (hover: none) and (pointer: coarse) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+/* Lazy image placeholder */
+.lazy-image {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.lazy-image.loaded {
+  opacity: 1;
+}
+
+/* Skeleton loading animation optimized */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(22, 27, 34, 1) 0%,
+    rgba(48, 54, 61, 0.5) 50%,
+    rgba(22, 27, 34, 1) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* Intersection Observer fade-in */
+.fade-on-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Reduce motion - override animations */
+@media (prefers-reduced-motion: reduce) {
+  .gpu-accelerate,
+  .optimize-paint {
+    will-change: auto;
+    transform: none;
+  }
+  
+  .lazy-image,
+  .fade-on-scroll {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Image loading optimization */
+img {
+  content-visibility: auto;
+}
+
+/* Heavy section optimization */
+section {
+  contain: layout style;
+}
+
