@@ -12,26 +12,32 @@ model User {
   email         String?        @unique
   name          String?
   avatarUrl     String?
+  role          String         @default("USER") // "USER" | "ADMIN"
+  lastLoginAt   DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   installations Installation[]
   accounts      Account[]
   testimonials  Testimonial[]
+  auditLogs     AuditLog[]
 }
 
 model Testimonial {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String   // Testimonial text (max ~280 chars recommended)
-  rating    Int      @default(5) // 1-5 star rating
-  approved  Boolean  @default(false) // Admin approval for moderation
-  featured  Boolean  @default(false) // Featured on homepage
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content       String    // Original testimonial text (max ~280 chars)
+  rating        Int       @default(5) // 1-5 star rating
+  status        String    @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+  featured      Boolean   @default(false) // Featured on homepage
+  editedContent String?   // Admin-edited content (if modified before approval)
+  editedAt      DateTime? // When admin edited
+  editedBy      String?   // Admin userId who edited
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([userId])
-  @@index([approved, featured])
+  @@index([status, featured])
 }
 
 model Account {
@@ -92,5 +98,22 @@ model VisitorLog {
   createdAt DateTime @default(now())
 
   @@unique([ip, page]) // One notification per IP per page
+  @@index([createdAt])
+}
+
+// User-level audit log for tracking all user actions (immutable, append-only)
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String   // LOGIN, LOGOUT, REPO_ADDED, REPO_REMOVED, PAUSE, RESUME, etc.
+  entityType  String?  // Installation, Testimonial, etc.
+  entityId    String?  // ID of the affected entity
+  metadata    Json?    // Additional context (e.g., repoName, oldValue, newValue)
+  ipAddress   String?  // For security auditing
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
   @@index([createdAt])
 }
