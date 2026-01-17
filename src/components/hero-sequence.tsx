@@ -41,20 +41,21 @@ export function HeroSequence() {
     }, [])
 
     return (
-        <section className="relative min-h-screen flex flex-col items-center justify-start pt-6 lg:justify-center lg:pt-0 bg-[#0d1117] overflow-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
+        <section className="relative min-h-fit lg:min-h-screen flex flex-col items-center justify-start pt-6 lg:justify-center lg:pt-0 bg-[#0d1117] overflow-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
             {/* Dynamic Backgrounds */}
             <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] animate-grid pointer-events-none" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-[#050505]/80 pointer-events-none" />
 
             {/* Main Content */}
-            <div className="relative z-10 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center gap-6">
+            <div className="relative z-10 w-full max-w-5xl mx-auto px-4 py-4 lg:py-8 flex flex-col items-center gap-4 lg:gap-6">
 
                 {/* Animated Title with Logo as 'O' */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
                     animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
                     transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex items-center justify-center"
+                    className="flex items-center justify-center transform-gpu"
+                    style={{ willChange: 'opacity, transform, filter' }}
                 >
                     <h1 className="text-[2.5rem] sm:text-7xl lg:text-8xl font-black tracking-wide text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 flex items-center justify-center whitespace-nowrap">
                         <span>C</span>
@@ -69,7 +70,8 @@ export function HeroSequence() {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
                             style={{
-                                filter: "drop-shadow(0 0 15px rgba(57,211,83,0.5))"
+                                filter: "drop-shadow(0 0 15px rgba(57,211,83,0.5))",
+                                willChange: 'opacity, transform'
                             }}
                         />
                         <span>mmit</span>
@@ -81,8 +83,9 @@ export function HeroSequence() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
                                 className="absolute top-1 -right-8 sm:top-0 sm:-right-10 group cursor-pointer"
+                                style={{ willChange: 'opacity, transform' }}
                             >
-                                <div className="relative rounded-full p-[1px] overflow-hidden">
+                                <div className="relative rounded-full p-[1px] overflow-hidden transform-gpu">
                                     <div className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0deg,#ffffff_180deg,transparent_360deg)] animate-[spin_4s_linear_infinite]" />
                                     <div className="relative flex items-center justify-center px-1.5 py-[1px] sm:px-2 sm:py-0.5 rounded-full bg-[#0d1117] backdrop-blur-sm">
                                         <span className="text-[8px] sm:text-[10px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] to-[#a371f7] tracking-[0.15em] leading-none uppercase">
@@ -119,7 +122,8 @@ export function HeroSequence() {
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-                    className="w-full max-w-5xl mx-auto"
+                    className="w-full max-w-5xl mx-auto transform-gpu"
+                    style={{ willChange: 'opacity, transform' }}
                 >
                     <ContributionDemo />
                 </motion.div>
@@ -133,7 +137,8 @@ export function HeroSequence() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.4 }}
-                                className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight"
+                                className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight transform-gpu"
+                                style={{ willChange: 'opacity, transform' }}
                             >
                                 Consistency <span className="text-[#39d353]">&gt;</span> Motivation
                             </motion.h2>
@@ -146,7 +151,8 @@ export function HeroSequence() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: 0.6 }}
-                    className="w-full max-w-sm px-4 lg:px-0"
+                    className="w-full max-w-sm px-4 lg:px-0 transform-gpu"
+                    style={{ willChange: 'opacity, transform' }}
                 >
                     {isCheckingSession ? (
                         <div className="h-[60px] flex items-center justify-center">
@@ -189,6 +195,7 @@ export function HeroSequence() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.8 }}
                         className="flex items-center justify-center gap-6 mt-4 text-sm text-[#8b949e]"
+                        style={{ willChange: 'opacity' }}
                     >
                         {['No PAT', 'Open Source', 'Free'].map((item, i) => (
                             <span key={i} className="flex items-center gap-2">
@@ -205,7 +212,7 @@ export function HeroSequence() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.5, duration: 1 }}
-                className="absolute bottom-4 text-[#8b949e] hover:text-white transition-colors cursor-pointer"
+                className="relative lg:absolute mt-6 lg:mt-0 lg:bottom-4 text-[#8b949e] hover:text-white transition-colors cursor-pointer pb-4 lg:pb-0"
                 onClick={() => {
                     const featuresSection = document.getElementById('features')
                     if (featuresSection) {
@@ -213,6 +220,7 @@ export function HeroSequence() {
                     }
                 }}
                 aria-label="Scroll to next section"
+                style={{ willChange: 'opacity' }}
             >
                 <ChevronDown size={28} className="animate-bounce" />
             </motion.button>

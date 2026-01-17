@@ -101,18 +101,18 @@ function PaintDrip({ className }: { className?: string }) {
     )
 }
 
-// Spray dots for authentic graffiti look
+// Spray dots for authentic graffiti look - Optimized
 function SprayDots({ className }: { className?: string }) {
     return (
         <div className={`absolute ${className}`}>
-            {[...Array(8)].map((_, i) => (
+            {[...Array(5)].map((_, i) => ( // Reduced from 8 to 5 for performance
                 <div
                     key={i}
                     className="absolute w-1 h-1 rounded-full bg-current opacity-40"
                     style={{
                         left: `${(i * 13) % 30}px`,
                         top: `${(i * 17) % 20}px`,
-                        transform: `scale(${0.5 + (i % 3) * 0.3})`
+                        transform: `scale(${0.5 + (i % 3) * 0.3}) translateZ(0)`
                     }}
                 />
             ))}
@@ -122,21 +122,21 @@ function SprayDots({ className }: { className?: string }) {
 
 function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, index: number, onClick?: () => void }) {
     // Deterministic rotation for organic street art feel
-    const randomRotate = ((index * 137) % 6 - 3); // -3 to 3 degrees (slightly less rotation)
+    const randomRotate = ((index * 137) % 6 - 3); // -3 to 3 degrees
     const randomScale = 0.98 + ((index * 79) % 4) / 100; // 0.98 to 1.02
 
-    // Color palette for spray paint colors - vibrant street art colors
+    // Color palette for spray paint colors
     const sprayColors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd', '#00d2d3', '#1dd1a1'];
     const primaryColor = sprayColors[index % sprayColors.length];
     const secondaryColor = sprayColors[(index + 3) % sprayColors.length];
 
-    // Tape rotation variations
+    // Tape rotation
     const tapeRotations = [-15, 12, -8, 18, -12, 10, -20, 15];
     const tapeRotation = tapeRotations[index % tapeRotations.length];
 
     return (
         <div
-            className="relative w-[340px] md:w-[380px] flex-shrink-0 mx-2 h-[240px] md:h-[260px] group cursor-pointer"
+            className="relative w-[340px] md:w-[380px] flex-shrink-0 mx-2 h-[240px] md:h-[260px] group cursor-pointer transform-gpu perspective-1000"
             style={{
                 transform: `rotate(${randomRotate}deg) scale(${randomScale}) translateZ(0)`,
                 willChange: 'transform',
@@ -146,46 +146,43 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
         >
             {/* === BRICK WALL BACKGROUND === */}
             <div
-                className="absolute inset-0 rounded-lg overflow-hidden"
+                className="absolute inset-0 rounded-lg overflow-hidden transform-gpu"
                 style={{
                     backgroundImage: `url('/brick-wall.png')`,
                     backgroundSize: '150px',
                     backgroundPosition: 'center',
                 }}
             >
-                {/* Dark grunge overlay for depth */}
-                <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-black/40 to-black/60" />
+                {/* Dark grunge overlay - Simplified for mobile */}
+                <div className="absolute inset-0 bg-black/50 md:bg-gradient-to-br md:from-black/50 md:via-black/40 md:to-black/60" />
 
-                {/* Weathering/aging texture overlay */}
+                {/* Noise texture - Only on desktop to save mobile GPU */}
                 <div
-                    className="absolute inset-0 opacity-30 mix-blend-overlay"
+                    className="hidden md:block absolute inset-0 opacity-30 mix-blend-overlay"
                     style={{
                         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
                     }}
                 />
             </div>
 
-            {/* === CONTENT CONTAINER - NEW LAYOUT === */}
-            <div className="relative z-10 h-full p-4 flex flex-col">
+            {/* === CONTENT CONTAINER === */}
+            <div className="relative z-10 h-full p-4 flex flex-col transform-gpu">
 
-                {/* === TOP ROW: AVATAR + NAME WITH PAINT SPLASH === */}
+                {/* === TOP ROW: AVATAR + NAME === */}
                 <div className="flex items-start gap-5 mb-3">
                     {/* Avatar with tape */}
                     <div className="flex-shrink-0 relative">
                         {/* Masking tape */}
                         <div
-                            className="absolute -top-2 left-1/2 -translate-x-1/2 w-7 h-2.5 bg-gradient-to-b from-amber-100/90 to-amber-200/80 rounded-sm shadow-sm z-20"
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 w-7 h-2.5 bg-[#f0e68c] rounded-sm shadow-sm z-20"
                             style={{ transform: `translateX(-50%) rotate(${tapeRotation}deg)` }}
-                        >
-                            <div className="absolute inset-0 opacity-30 bg-[repeating-linear-gradient(90deg,transparent,transparent_2px,rgba(0,0,0,0.1)_2px,rgba(0,0,0,0.1)_4px)]" />
-                        </div>
+                        />
 
                         {/* Avatar image */}
                         <div
-                            className="relative w-14 h-16 md:w-16 md:h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-sm shadow-lg overflow-hidden group-hover:scale-105 transition-transform duration-300"
+                            className="relative w-14 h-16 md:w-16 md:h-20 bg-gray-200 rounded-sm shadow-md overflow-hidden group-hover:scale-105 transition-transform duration-300 transform-gpu"
                             style={{
                                 transform: `rotate(${randomRotate * 0.3}deg)`,
-                                boxShadow: '3px 3px 10px rgba(0,0,0,0.5)',
                             }}
                         >
                             <img
@@ -197,36 +194,26 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
                                 decoding="async"
                                 className="w-full h-full object-cover grayscale-[20%] contrast-110 group-hover:grayscale-0 transition-all duration-500"
                             />
-                            <div className="absolute inset-0 shadow-[inset_0_0_10px_rgba(0,0,0,0.3)]" />
                         </div>
                     </div>
 
-                    {/* Name with white paint splash banner */}
+                    {/* Name */}
                     <div className="flex-1 min-w-0 pt-1 flex flex-col items-start">
                         <div className="relative inline-block max-w-full">
-                            {/* White paint splash background - more natural organic shape */}
+                            {/* White paint splash - CSS gradient instead of box-shadow for performance */}
                             <div
-                                className="absolute -inset-x-2 -inset-y-1"
+                                className="absolute -inset-x-2 -inset-y-1 bg-white/90"
                                 style={{
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(245,245,240,0.9) 100%)',
                                     transform: `rotate(${-randomRotate * 0.3}deg) skewX(${randomRotate * 0.2}deg)`,
                                     borderRadius: '4px 12px 6px 10px',
-                                    boxShadow: '2px 3px 8px rgba(0,0,0,0.25), inset 0 0 8px rgba(255,255,255,0.5)',
                                 }}
                             />
-                            {/* Paint drip on the splash */}
-                            <div
-                                className="absolute -bottom-2 left-4 w-1.5 h-3 bg-white/80 rounded-b-full"
-                                style={{ filter: 'blur(0.3px)' }}
-                            />
+
                             <h3
                                 className="relative font-['Permanent_Marker'] text-xl md:text-2xl leading-tight tracking-wide truncate px-1"
                                 style={{
                                     color: primaryColor,
-                                    textShadow: `
-                                        2px 2px 0 rgba(0,0,0,0.3),
-                                        -1px -1px 0 rgba(255,255,255,0.8)
-                                    `,
+                                    textShadow: '1px 1px 0 rgba(0,0,0,0.3)', // Simplified text-shadow
                                     WebkitTextStroke: '0.3px rgba(0,0,0,0.2)',
                                 }}
                             >
@@ -234,15 +221,12 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
                             </h3>
                         </div>
 
-                        {/* GitHub handle - more readable with background, left aligned */}
+                        {/* GitHub handle */}
                         <a
                             href={`https://github.com/${testimonial.githubUsername}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 bg-white/85 rounded hover:bg-white transition-colors"
-                            style={{
-                                boxShadow: '1px 1px 4px rgba(0,0,0,0.15)',
-                            }}
+                            className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 bg-white/85 rounded hover:bg-white transition-colors shadow-sm"
                         >
                             <Github size={11} className="text-[#24292f]" />
                             <span className="text-[11px] font-mono text-[#24292f] font-medium">
@@ -252,22 +236,13 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
                     </div>
                 </div>
 
-                {/* === MIDDLE: FEEDBACK TEXT - BOLD AND PROMINENT === */}
+                {/* === MIDDLE: FEEDBACK TEXT === */}
                 <div className="flex-1 flex items-center">
                     <div className="relative w-full">
-                        {/* Subtle background for readability */}
-                        <div className="absolute inset-0 -m-2 bg-black/30 rounded-md blur-sm" />
                         <p
-                            className="relative font-['Permanent_Marker'] text-base md:text-lg leading-relaxed line-clamp-3 tracking-wide"
+                            className="relative font-['Permanent_Marker'] text-base md:text-lg leading-relaxed line-clamp-3 tracking-wide text-white"
                             style={{
-                                color: '#ffffff',
-                                textShadow: `
-                                    2px 2px 0 rgba(0,0,0,1),
-                                    -1px -1px 0 rgba(0,0,0,0.8),
-                                    1px -1px 0 rgba(0,0,0,0.8),
-                                    -1px 1px 0 rgba(0,0,0,0.8),
-                                    0 0 20px rgba(255,255,255,0.3)
-                                `,
+                                textShadow: '1px 1px 0 rgba(0,0,0,0.8)', // Simplified shadow
                                 fontWeight: 500,
                             }}
                         >
@@ -277,39 +252,23 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
                 </div>
 
                 {/* === BOTTOM ROW: STAR RATING === */}
-                <div className="flex items-center gap-1 mt-3">
+                <div className="flex items-center gap-1 mt-3 transform-gpu">
                     {[...Array(5)].map((_, i) => (
                         <Star
                             key={i}
                             size={18}
-                            className="transition-all duration-300"
+                            className="transition-colors duration-300"
                             style={{
                                 color: i < testimonial.rating ? '#feca57' : 'rgba(255,255,255,0.3)',
                                 fill: i < testimonial.rating ? '#feca57' : 'transparent',
-                                filter: i < testimonial.rating
-                                    ? 'drop-shadow(0 0 6px rgba(254,202,87,0.8)) drop-shadow(2px 2px 0 rgba(0,0,0,0.9))'
-                                    : 'drop-shadow(1px 1px 0 rgba(0,0,0,0.5))',
                             }}
                         />
                     ))}
                 </div>
             </div>
 
-            {/* === DECORATIVE SPRAY DOTS === */}
-            <div
-                className="absolute top-3 right-3 w-2 h-2 rounded-full opacity-50"
-                style={{ backgroundColor: primaryColor, filter: 'blur(1px)' }}
-            />
-            <div
-                className="absolute bottom-4 left-6 w-1.5 h-1.5 rounded-full opacity-40"
-                style={{ backgroundColor: secondaryColor, filter: 'blur(0.5px)' }}
-            />
-
             {/* Hover border highlight */}
-            <div
-                className="absolute inset-0 rounded-lg border-2 border-transparent group-hover:border-white/30 pointer-events-none"
-                style={{ transition: 'border-color 0.15s ease-out' }}
-            />
+            <div className="absolute inset-0 rounded-lg border-2 border-transparent group-hover:border-white/30 pointer-events-none transition-colors duration-150" />
         </div>
     )
 }
@@ -320,7 +279,9 @@ function CssMarquee({ items, direction = 'left', speed = '40s', className, onCar
             className={`flex overflow-hidden group/row ${className}`}
             style={{
                 maskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent, black 10%, black 90%, transparent)',
                 contain: 'layout style',
+                transform: 'translateZ(0)', // Force GPU layer
             }}
         >
             <div
@@ -329,10 +290,12 @@ function CssMarquee({ items, direction = 'left', speed = '40s', className, onCar
                     animationDuration: speed,
                     willChange: 'transform',
                     backfaceVisibility: 'hidden',
+                    perspective: 1000,
+                    transformStyle: 'preserve-3d',
                 }}
             >
                 {[...items, ...items].map((testimonial, i) => (
-                    <div key={`${testimonial.id}-${i}`} className="py-2">
+                    <div key={`${testimonial.id}-${i}`} className="py-2 transform-gpu">
                         <BrickCard
                             testimonial={testimonial}
                             index={i}
@@ -434,6 +397,8 @@ export function TestimonialsSection() {
         }
         checkSessionAndFeedback()
     }, [])
+
+
 
     // Handle submit
     const handleSubmit = async () => {
@@ -740,10 +705,17 @@ export function TestimonialsSection() {
                                             >
                                                 {selectedTestimonial.userName}
                                             </h4>
-                                            <div className="flex items-center gap-2 text-white/60 text-sm font-sans">
-                                                <Github size={14} />
+                                            {/* Clickable GitHub ID */}
+                                            <a
+                                                href={`https://github.com/${selectedTestimonial.githubUsername}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 text-white/60 text-sm font-sans hover:text-[#f2cc60] transition-colors group"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Github size={14} className="group-hover:scale-110 transition-transform" />
                                                 <span>@{selectedTestimonial.githubUsername}</span>
-                                            </div>
+                                            </a>
                                         </div>
                                     </div>
 
