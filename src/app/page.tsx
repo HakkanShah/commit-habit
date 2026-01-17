@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
+import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles, Settings } from 'lucide-react'
 import { HeroSequence } from '@/components/hero-sequence'
 import { ErrorBanner } from '@/components/error-banner'
+import Link from 'next/link'
 
 // Lazy load heavy components for better initial load performance
 const TestimonialsSection = dynamic(() => import('@/components/testimonials-section').then(mod => ({ default: mod.TestimonialsSection })), {
@@ -55,7 +56,9 @@ const cardHover = {
 }
 
 export default function HomePage() {
-  // Track page visit
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Track page visit and check admin status
   useEffect(() => {
     fetch('/api/analytics/track', {
       method: 'POST',
@@ -65,6 +68,12 @@ export default function HomePage() {
         referrer: document.referrer || null,
       }),
     }).catch(() => { }) // Silent fail
+
+    // Check if current user is admin
+    fetch('/api/auth/admin-check')
+      .then(res => res.json())
+      .then(data => setIsAdmin(data.isAdmin))
+      .catch(() => { }) // Silent fail
   }, [])
 
   return (
@@ -301,6 +310,18 @@ export default function HomePage() {
               <span className="text-xs">© 2026 CommitHabit</span>
               <span className="text-[#30363d]">•</span>
               <a href="https://github.com/HakkanShah/commit-habit" target="_blank" rel="noopener noreferrer" className="hover:text-[#39d353] transition-colors">Open Source</a>
+              {isAdmin && (
+                <>
+                  <span className="text-[#30363d]">•</span>
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-[#f85149]/10 to-[#da3633]/10 border border-[#f85149]/30 text-[#f85149] hover:border-[#f85149]/60 hover:text-white transition-all group"
+                  >
+                    <Settings size={12} className="group-hover:rotate-90 transition-transform" />
+                    <span className="text-xs font-medium">Admin</span>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </footer>

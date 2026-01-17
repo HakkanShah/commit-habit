@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Star, Sparkles, Quote, Github, X, Loader2 } from 'lucide-react'
 import { useToast } from './toast'
+import { useSearchParams } from 'next/navigation'
 
 // Import Font (We'll load it via style tag for simplicity in this component)
 // Google Font: Permanent Marker
@@ -246,7 +247,7 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
                                 fontWeight: 500,
                             }}
                         >
-                            "{testimonial.content}"
+                            &quot;{testimonial.content}&quot;
                         </p>
                     </div>
                 </div>
@@ -326,6 +327,7 @@ function CssMarquee({ items, direction = 'left', speed = '40s', className, onCar
 
 export function TestimonialsSection() {
     const { success, error } = useToast()
+    const searchParams = useSearchParams()
 
     // Testimonials from database
     const [testimonials, setTestimonials] = useState<Testimonial[]>(MOCK_TESTIMONIALS)
@@ -365,6 +367,18 @@ export function TestimonialsSection() {
         }
         fetchTestimonials()
     }, [])
+
+    // Open modal if requested via URL param (from feedback reminder)
+    useEffect(() => {
+        const openFeedback = searchParams.get('openFeedback')
+        if (openFeedback === 'true') {
+            setIsModalOpen(true)
+            // Clean up URL without refresh
+            const url = new URL(window.location.href)
+            url.searchParams.delete('openFeedback')
+            window.history.replaceState({}, '', url)
+        }
+    }, [searchParams])
 
     // Check session and existing feedback on mount
     useEffect(() => {
@@ -538,13 +552,16 @@ export function TestimonialsSection() {
                                             <p className="text-white text-sm mb-3 font-sans">
                                                 🔐 Connect with GitHub to leave your mark!
                                             </p>
-                                            <a
-                                                href="/api/auth/github"
-                                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-[#24292f] text-sm rounded-full hover:bg-[#f2cc60] hover:text-black transition-all font-sans font-bold shadow-lg hover:shadow-[#f2cc60]/30"
+                                            <button
+                                                onClick={() => {
+                                                    localStorage.setItem('pendingFeedbackIntent', 'true')
+                                                    window.location.href = '/api/auth/github'
+                                                }}
+                                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-[#24292f] text-sm rounded-full hover:bg-[#f2cc60] hover:text-black transition-all font-sans font-bold shadow-lg hover:shadow-[#f2cc60]/30 cursor-pointer"
                                             >
                                                 <Github size={16} />
                                                 Connect GitHub
-                                            </a>
+                                            </button>
                                         </motion.div>
                                     )}
 
@@ -739,7 +756,7 @@ export function TestimonialsSection() {
                                         className="text-xl text-white leading-relaxed tracking-wide"
                                         style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}
                                     >
-                                        "{selectedTestimonial.content}"
+                                        &quot;{selectedTestimonial.content}&quot;
                                     </p>
                                 </div>
                             </div>

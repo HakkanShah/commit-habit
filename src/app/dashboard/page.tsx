@@ -2,6 +2,9 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { DashboardClient } from './dashboard-client'
+import { isAdmin } from '@/lib/admin-auth'
+
+export const dynamic = 'force-dynamic'
 
 // ⚠️ DEV ONLY: Set to true to bypass login for UI testing (MUST be false in production!)
 const BYPASS_AUTH = false
@@ -207,6 +210,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         })),
     }))
 
+    // Check if user is admin
+    const adminStatus = await isAdmin(user.id)
+
     return (
         <DashboardClient
             user={{
@@ -216,6 +222,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             displayName={displayName}
             githubAppUrl={githubAppUrl}
             initialInstallations={installations}
+            isAdmin={adminStatus}
         />
     )
 }

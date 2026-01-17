@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRight, ChevronDown, Zap, Activity, TrendingUp, BarChart3, X } from 'lucide-react'
+import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRight, ChevronDown, Zap, Activity, TrendingUp, BarChart3, X, Settings } from 'lucide-react'
 import { InstallationCard } from './installation-card'
 import { WelcomeAnimation } from './WelcomeAnimation'
 import { OnboardingPopup } from './onboarding-popup'
@@ -37,6 +37,7 @@ interface DashboardProps {
     displayName: string
     githubAppUrl: string
     initialInstallations: Installation[]
+    isAdmin?: boolean
 }
 
 interface UpdateResponse {
@@ -57,7 +58,7 @@ interface CommitResponse {
     error?: string
 }
 
-export function DashboardClient({ user, displayName, githubAppUrl, initialInstallations }: DashboardProps) {
+export function DashboardClient({ user, displayName, githubAppUrl, initialInstallations, isAdmin }: DashboardProps) {
     // State for all installations - enables optimistic updates
     const [installations, setInstallations] = useState<Installation[]>(initialInstallations)
     const [pendingActions, setPendingActions] = useState<Set<string>>(new Set())
@@ -456,6 +457,21 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                                                 <p className="text-[10px] text-[#8b949e]">Configure installations</p>
                                                             </div>
                                                         </a>
+
+                                                        {isAdmin && (
+                                                            <Link
+                                                                href="/admin"
+                                                                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-[#f85149]/10 text-white hover:text-[#f85149] transition-colors group"
+                                                            >
+                                                                <div className="w-9 h-9 rounded-lg bg-[#f85149]/10 flex items-center justify-center group-hover:bg-[#f85149]/20 transition-colors">
+                                                                    <Settings size={18} className="text-[#f85149]" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-medium">Admin Panel</p>
+                                                                    <p className="text-[10px] text-[#8b949e]">Manage users & feedback</p>
+                                                                </div>
+                                                            </Link>
+                                                        )}
                                                     </div>
 
                                                     {/* Logout */}
