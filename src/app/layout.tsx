@@ -90,11 +90,15 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <head>
+        {/* Preload LCP image */}
+        <link rel="preload" href="/logo.png" as="image" type="image/png" />
+
         {/* DNS Prefetch & Preconnect for external resources */}
         <link rel="dns-prefetch" href="https://github.com" />
         <link rel="dns-prefetch" href="https://avatars.githubusercontent.com" />
         <link rel="preconnect" href="https://github.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}

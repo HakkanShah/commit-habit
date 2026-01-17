@@ -6,7 +6,12 @@ import { motion } from 'framer-motion'
 import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { HeroSequence } from '@/components/hero-sequence'
 import { ErrorBanner } from '@/components/error-banner'
-import { TestimonialsSection } from '@/components/testimonials-section'
+
+// Lazy load heavy components for better initial load performance
+const TestimonialsSection = dynamic(() => import('@/components/testimonials-section').then(mod => ({ default: mod.TestimonialsSection })), {
+  loading: () => <div className="h-[600px] bg-[#0d1117] animate-pulse" />,
+  ssr: false
+})
 
 // Lazy load heavy components for better initial load performance
 const AnimatedTerminal = dynamic(() => import('@/components/animated-terminal').then(mod => ({ default: mod.AnimatedTerminal })), {
@@ -75,7 +80,7 @@ export default function HomePage() {
         <HeroSequence />
 
         {/* Features Section - Glassmorphism & Hover Effects */}
-        <section id="features" className="relative pt-8 pb-8 lg:pt-16 lg:pb-12 overflow-hidden">
+        <section id="features" className="relative pt-8 pb-8 lg:pt-16 lg:pb-12 overflow-hidden content-auto">
           <div className="relative max-w-6xl mx-auto px-4 z-10">
             <motion.div className="text-center mb-8 lg:mb-10" {...fadeInUp}>
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#238636]/10 border border-[#238636]/20 text-[#39d353] text-xs font-mono mb-6 backdrop-blur-sm">
@@ -149,7 +154,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="relative pt-8 pb-20 lg:pt-12 lg:pb-32 overflow-hidden">
+        <section className="relative pt-8 pb-12 lg:pt-12 lg:pb-32 overflow-hidden content-auto">
           {/* Ambient Glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#39d353]/5 blur-[100px] rounded-full pointer-events-none" />
           <div className="max-w-6xl mx-auto px-4">
@@ -195,7 +200,7 @@ export default function HomePage() {
         {/* Testimonials Section */}
         <TestimonialsSection />
 
-        <section className="relative py-24 lg:py-32 overflow-hidden">
+        <section className="relative py-12 lg:py-24 overflow-hidden content-auto">
           <div className="absolute inset-x-0 bottom-0 h-[600px] bg-gradient-to-t from-[#238636]/10 via-[#238636]/5 to-transparent pointer-events-none" />
 
 

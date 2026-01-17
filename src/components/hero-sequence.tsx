@@ -41,7 +41,7 @@ export function HeroSequence() {
     }, [])
 
     return (
-        <section className="relative min-h-screen flex flex-col items-center justify-center bg-[#0d1117] overflow-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
+        <section className="relative min-h-screen flex flex-col items-center justify-start pt-6 lg:justify-center lg:pt-0 bg-[#0d1117] overflow-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
             {/* Dynamic Backgrounds */}
             <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] animate-grid pointer-events-none" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0d1117] via-transparent to-[#050505]/80 pointer-events-none" />
@@ -61,24 +61,13 @@ export function HeroSequence() {
                         <motion.img
                             src="/logo.png"
                             alt="o"
+                            width={80}
+                            height={80}
+                            fetchPriority="high"
                             className="h-[0.9em] w-auto object-contain inline-block align-middle -mx-[0.05em] translate-y-[0.1em]"
-                            initial={{ opacity: 0, scale: 0, rotate: -180 }}
-                            animate={{
-                                opacity: 1,
-                                scale: 1,
-                                rotate: 0
-                            }}
-                            transition={{
-                                duration: 0.8,
-                                delay: 0.3,
-                                type: "spring",
-                                stiffness: 200
-                            }}
-                            whileHover={{
-                                scale: 1.2,
-                                rotate: 360,
-                                filter: "drop-shadow(0 0 30px rgba(57,211,83,0.8))"
-                            }}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
                             style={{
                                 filter: "drop-shadow(0 0 15px rgba(57,211,83,0.5))"
                             }}
