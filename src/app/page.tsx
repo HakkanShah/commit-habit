@@ -155,21 +155,21 @@ export default function HomePage() {
         </section>
 
         <section className="relative pt-8 pb-12 lg:pt-12 lg:pb-32 overflow-hidden content-auto">
-          {/* Ambient Glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#39d353]/5 blur-[100px] rounded-full pointer-events-none" />
+          {/* Ambient Glow - Optimized blur for mobile */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] lg:w-[500px] lg:h-[500px] bg-[#39d353]/5 blur-[40px] lg:blur-[100px] rounded-full pointer-events-none transform-translate-z-0" />
           <div className="max-w-6xl mx-auto px-4">
             <div className="flex flex-col lg:grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
               {/* Terminal */}
               <motion.div
                 {...fadeInUp}
-                className="w-full order-1 lg:order-2"
+                className="w-full order-1 lg:order-2 transform-gpu"
               >
                 <AnimatedTerminal />
               </motion.div>
 
               {/* Content */}
-              <motion.div {...fadeInUp} className="order-2 lg:order-1">
+              <motion.div {...fadeInUp} className="order-2 lg:order-1 transform-gpu">
                 <h2 className="text-3xl lg:text-5xl font-black mb-6 leading-tight">
                   Code seamlessly.<br />
                   <span className="text-[#8b949e]">We handle the rest.</span>
@@ -185,6 +185,7 @@ export default function HomePage() {
                         key={i}
                         className="flex items-center gap-3 text-sm font-medium text-[#c9d1d9]"
                         whileHover={{ x: 5 }}
+                        style={{ willChange: 'transform' }}
                       >
                         <span className="w-6 h-6 rounded-full bg-[#238636]/20 flex items-center justify-center text-[#39d353] border border-[#238636]/30">✓</span>
                         {item}
