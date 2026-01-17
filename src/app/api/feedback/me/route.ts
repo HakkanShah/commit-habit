@@ -22,7 +22,7 @@ export async function GET() {
                     id: existing.id,
                     content: existing.content,
                     rating: existing.rating,
-                    approved: existing.approved
+                    status: existing.status // Changed from approved to status
                 }
             })
         }
