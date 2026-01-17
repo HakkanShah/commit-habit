@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { DashboardClient } from './dashboard-client'
 
+export const dynamic = 'force-dynamic'
+
 // ⚠️ DEV ONLY: Set to true to bypass login for UI testing (MUST be false in production!)
 const BYPASS_AUTH = false
 
