@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import type { Testimonial, User } from '@prisma/client'
 
 // GET /api/testimonials - Fetch approved testimonials for homepage
 export async function GET(request: Request) {
@@ -10,7 +9,7 @@ export async function GET(request: Request) {
 
         const testimonials = await prisma.testimonial.findMany({
             where: {
-                approved: true,
+                status: 'APPROVED', // Changed from approved: true
                 ...(featured && { featured: true }),
             },
             include: {
@@ -27,12 +26,12 @@ export async function GET(request: Request) {
             take: 12, // Limit to 12 testimonials
         })
 
-        // Transform data to hide user IDs
+        // Transform data to hide user IDs, use editedContent if available
         const formattedTestimonials = testimonials.map((t) => ({
             id: t.id,
             userName: t.user.name || 'Anonymous User',
             avatarUrl: t.user.avatarUrl,
-            content: t.content,
+            content: t.editedContent ?? t.content, // Prefer admin-edited content
             rating: t.rating,
             createdAt: t.createdAt,
         }))

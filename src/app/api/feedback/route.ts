@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logAuditAsync } from '@/lib/audit'
+import { sendAdminNewTestimonialNotification } from '@/lib/email'
 
 // GET - Fetch all approved testimonials
 export async function GET() {
     try {
         const testimonials = await prisma.testimonial.findMany({
-            where: { approved: true },
+            where: { status: 'APPROVED' },
             include: {
                 user: {
                     include: {
@@ -20,12 +22,12 @@ export async function GET() {
             orderBy: { createdAt: 'desc' }
         })
 
-        // Format for frontend
+        // Format for frontend - use editedContent if available, otherwise original content
         const formatted = testimonials.map(t => ({
             id: t.id,
             userName: t.user.name || 'Anonymous',
             githubUsername: t.user.accounts[0]?.providerUsername || 'user',
-            content: t.content,
+            content: t.editedContent ?? t.content, // Prefer edited content
             rating: t.rating,
             createdAt: t.createdAt
         }))
@@ -37,7 +39,7 @@ export async function GET() {
     }
 }
 
-// POST - Create or update feedback
+// POST - Create or update feedback (always goes to PENDING for new submissions)
 export async function POST(request: Request) {
     try {
         const session = await getSession()
@@ -81,33 +83,89 @@ export async function POST(request: Request) {
             where: { userId: session.userId }
         })
 
+        // Get user info for notification
+        const user = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: {
+                name: true,
+                email: true,
+                avatarUrl: true,
+                accounts: {
+                    where: { provider: 'github' },
+                    select: { providerUsername: true }
+                }
+            }
+        })
+
         let testimonial
         if (existing) {
-            // Update existing
+            // Update existing - goes back to PENDING for re-review
             testimonial = await prisma.testimonial.update({
                 where: { id: existing.id },
                 data: {
                     content: content.trim(),
                     rating: Math.round(ratingNum),
-                    approved: true, // Auto-approve updates for now
+                    status: 'PENDING', // Requires re-approval when updated
+                    editedContent: null, // Clear any previous admin edits
+                    editedAt: null,
+                    editedBy: null,
                     updatedAt: new Date()
                 }
             })
+
+            // Log audit
+            logAuditAsync({
+                userId: session.userId,
+                action: 'TESTIMONIAL_SUBMITTED',
+                entityType: 'Testimonial',
+                entityId: testimonial.id,
+                metadata: { isUpdate: true }
+            })
         } else {
-            // Create new
+            // Create new - starts as PENDING
             testimonial = await prisma.testimonial.create({
                 data: {
                     userId: session.userId,
                     content: content.trim(),
                     rating: Math.round(ratingNum),
-                    approved: true, // Auto-approve for now (can add moderation later)
+                    status: 'PENDING', // Requires admin approval
                     featured: false,
                 }
             })
+
+            // Log audit
+            logAuditAsync({
+                userId: session.userId,
+                action: 'TESTIMONIAL_SUBMITTED',
+                entityType: 'Testimonial',
+                entityId: testimonial.id,
+                metadata: { isUpdate: false }
+            })
         }
 
+        // Send email notification to admins (fire and forget)
+        sendAdminNewTestimonialNotification({
+            userName: user?.name || 'Anonymous',
+            userEmail: user?.email || null,
+            githubUsername: user?.accounts[0]?.providerUsername || null,
+            avatarUrl: user?.avatarUrl || null,
+            content: content.trim(),
+            rating: Math.round(ratingNum),
+            isUpdate: !!existing
+        }).catch(err => console.error('[EMAIL] Failed to send admin notification:', err))
+
         return NextResponse.json(
-            { success: true, testimonial, isUpdate: !!existing },
+            {
+                success: true,
+                testimonial: {
+                    id: testimonial.id,
+                    status: testimonial.status,
+                    content: testimonial.content,
+                    rating: testimonial.rating
+                },
+                isUpdate: !!existing,
+                message: 'Your feedback has been submitted and is pending admin approval.'
+            },
             { status: existing ? 200 : 201 }
         )
     } catch (error) {

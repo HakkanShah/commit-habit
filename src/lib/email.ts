@@ -549,3 +549,142 @@ GitHub Profile: https://github.com/${userData.githubUsername}
         return false
     }
 }
+
+// ============================================================================
+// Admin Testimonial Notification 
+// ============================================================================
+
+interface NewTestimonialData {
+    userName: string
+    userEmail: string | null
+    githubUsername: string | null
+    avatarUrl: string | null
+    content: string
+    rating: number
+    isUpdate: boolean
+}
+
+/**
+ * Send notification email to admins when a new testimonial is submitted
+ */
+export async function sendAdminNewTestimonialNotification(data: NewTestimonialData): Promise<boolean> {
+    const transporter = createTransporter()
+
+    if (!transporter) {
+        console.log('[EMAIL] Skipping testimonial notification - SMTP not configured')
+        return false
+    }
+
+    // Get admin emails from env
+    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map(e => e.trim()).filter(Boolean) || [ADMIN_EMAIL]
+
+    const timestamp = new Date().toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        dateStyle: 'medium',
+        timeStyle: 'short'
+    })
+
+    const stars = '⭐'.repeat(data.rating)
+    const actionType = data.isUpdate ? 'Updated' : 'New'
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://commithabit.app'
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${actionType} Testimonial Submitted</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d1117; color: #c9d1d9;">
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #0d1117;">
+        <tr>
+            <td align="center" style="padding: 16px 8px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 560px; background-color: #161b22; border-radius: 16px; border: 1px solid #30363d;">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 24px; text-align: center; background: linear-gradient(135deg, #58a6ff 0%, #1f6feb 100%); border-radius: 16px 16px 0 0;">
+                            <div style="font-size: 28px; margin-bottom: 8px;">💬</div>
+                            <h1 style="margin: 0; color: white; font-size: 20px; font-weight: 700;">${actionType} Testimonial Submitted!</h1>
+                            <p style="margin: 8px 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Requires your review</p>
+                        </td>
+                    </tr>
+
+                    <!-- User Info -->
+                    <tr>
+                        <td style="padding: 24px; text-align: center;">
+                            <img src="${data.avatarUrl || 'https://github.com/identicons/default.png'}" 
+                                 alt="User Avatar" 
+                                 style="width: 60px; height: 60px; border-radius: 50%; border: 3px solid #30363d;">
+                            <h2 style="margin: 12px 0 4px; color: white; font-size: 18px;">${data.userName}</h2>
+                            ${data.githubUsername ? `<a href="https://github.com/${data.githubUsername}" style="color: #58a6ff; font-size: 14px; text-decoration: none;">@${data.githubUsername}</a>` : ''}
+                        </td>
+                    </tr>
+
+                    <!-- Testimonial Content -->
+                    <tr>
+                        <td style="padding: 0 24px 24px;">
+                            <div style="background-color: #0d1117; border-radius: 12px; padding: 20px; border: 1px solid #30363d;">
+                                <div style="color: #f0883e; font-size: 18px; margin-bottom: 8px;">${stars}</div>
+                                <p style="color: white; font-size: 16px; line-height: 1.6; margin: 0; font-style: italic;">"${data.content}"</p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- CTA Button -->
+                    <tr>
+                        <td style="padding: 0 24px 24px; text-align: center;">
+                            <a href="${appUrl}/admin/feedback" 
+                               style="display: inline-block; background: linear-gradient(135deg, #238636 0%, #2ea043 100%); color: white; text-decoration: none; padding: 14px 32px; font-weight: 600; font-size: 15px; border-radius: 12px;">
+                                Review in Admin Panel →
+                            </a>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 16px 24px; text-align: center; background-color: #0d1117; border-top: 1px solid #21262d; border-radius: 0 0 16px 16px;">
+                            <p style="color: #6b7280; font-size: 12px; margin: 0;">
+                                Submitted: ${timestamp}
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+`
+
+    const textContent = `
+${actionType} Testimonial Submitted!
+
+From: ${data.userName}${data.githubUsername ? ` (@${data.githubUsername})` : ''}
+Rating: ${stars} (${data.rating}/5)
+
+"${data.content}"
+
+Review: ${appUrl}/admin/feedback
+
+Submitted: ${timestamp}
+`
+
+    try {
+        const info = await transporter.sendMail({
+            from: FROM_EMAIL,
+            to: adminEmails.join(', '),
+            subject: `💬 ${actionType} Testimonial from ${data.userName} - Review Required`,
+            text: textContent,
+            html: htmlContent,
+        })
+
+        console.log('[EMAIL] Admin testimonial notification sent:', info.messageId)
+        return true
+    } catch (error) {
+        console.error('[EMAIL] Failed to send testimonial notification:', error)
+        return false
+    }
+}
