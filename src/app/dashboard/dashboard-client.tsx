@@ -6,6 +6,7 @@ import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRigh
 import { InstallationCard } from './installation-card'
 import { WelcomeAnimation } from './WelcomeAnimation'
 import { OnboardingPopup } from './onboarding-popup'
+import { FeedbackReminder } from './feedback-reminder'
 import { useToast } from '@/components/toast'
 import { apiFetch } from '@/lib/api-client'
 import Link from 'next/link'
@@ -226,6 +227,17 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
     const hasCommitsToday = useMemo(() =>
         installations.some(i => i.active && i.commitsToday > 0),
         [installations]
+    )
+
+    // Check if dashboard is busy with any operation
+    // Used to prevent feedback reminder from interrupting user actions
+    const isBusy = useMemo(() =>
+        showOnboarding ||
+        isPollingForNewRepos ||
+        pendingActions.size > 0 ||
+        committingRepos.size > 0 ||
+        isLoggingOut,
+        [showOnboarding, isPollingForNewRepos, pendingActions, committingRepos, isLoggingOut]
     )
 
     // Optimistic toggle (pause/resume)
@@ -1082,6 +1094,9 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                     }}
                 />
             )}
+
+            {/* Feedback Reminder - Shows if user has no feedback and not busy */}
+            <FeedbackReminder isBusy={isBusy} />
         </div>
     )
 }
