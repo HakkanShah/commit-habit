@@ -6,6 +6,7 @@ import { Github, ExternalLink, LogOut, AlertCircle, GitCommit, Plus, ChevronRigh
 import { InstallationCard } from './installation-card'
 import { WelcomeAnimation } from './WelcomeAnimation'
 import { OnboardingPopup } from './onboarding-popup'
+import { FeedbackReminder } from './feedback-reminder'
 import { useToast } from '@/components/toast'
 import { apiFetch } from '@/lib/api-client'
 import Link from 'next/link'
@@ -124,8 +125,33 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                         setInstallations(data.installations)
                         sessionStorage.setItem('hasPolledForInstall', 'true')
 
+                        // Find newly added repos by comparing with initial
+                        const initialIds = new Set(initialInstallations.map(i => i.id))
+                        const newRepos = data.installations.filter((i: { id: string; active: boolean }) =>
+                            !initialIds.has(i.id) && i.active
+                        )
+                        const newRepoNames = newRepos.map((r: { repoFullName: string }) =>
+                            r.repoFullName.split('/')[1] || r.repoFullName
+                        )
+
+                        // Check if user is now at limit
+                        const activeRepos = data.installations.filter((i: { active: boolean }) => i.active).length
+
                         if (!hasShownWelcome) {
-                            success('Repository connected successfully! 🎉')
+                            if (activeRepos >= MAX_REPOS && newRepoNames.length < MAX_REPOS && newRepoNames.length > 0) {
+                                // At limit and added less than max - some were skipped
+                                const repoList = newRepoNames.slice(0, 3).join(', ')
+                                warning(`Added: ${repoList}. Limit is ${MAX_REPOS} repos per account - additional selections were skipped.`)
+                            } else if (activeRepos >= MAX_REPOS && newRepoNames.length > 0) {
+                                // At limit after adding max repos
+                                const repoList = newRepoNames.slice(0, 3).join(', ')
+                                warning(`Added: ${repoList}. You've reached the ${MAX_REPOS} repo limit!`)
+                            } else if (newRepoNames.length > 0) {
+                                // Under limit, show success with repo name
+                                success(`Connected: ${newRepoNames.join(', ')} 🎉`)
+                            } else {
+                                success('Repository connected successfully! 🎉')
+                            }
                             sessionStorage.setItem('hasShownWelcome', 'true')
                         }
                         return
@@ -226,6 +252,21 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
     const hasCommitsToday = useMemo(() =>
         installations.some(i => i.active && i.commitsToday > 0),
         [installations]
+    )
+
+    // Repository limit check (max 3 repos per user)
+    const MAX_REPOS = 3
+    const isAtRepoLimit = activeCount >= MAX_REPOS
+
+    // Check if dashboard is busy with any operation
+    // Used to prevent feedback reminder from interrupting user actions
+    const isBusy = useMemo(() =>
+        showOnboarding ||
+        isPollingForNewRepos ||
+        pendingActions.size > 0 ||
+        committingRepos.size > 0 ||
+        isLoggingOut,
+        [showOnboarding, isPollingForNewRepos, pendingActions, committingRepos, isLoggingOut]
     )
 
     // Optimistic toggle (pause/resume)
@@ -547,13 +588,20 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                     {/* Quick Actions - Mobile: 2 buttons on top row, Add Repo below | Desktop: vertical stack */}
                     <div className="flex flex-col-reverse lg:flex-col gap-2 lg:justify-between">
                         {/* Add Repository - Full width, shown at bottom on mobile */}
-                        <a
-                            href={githubAppUrl}
-                            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] px-5 py-3 rounded-xl text-sm font-bold shadow-lg shadow-[#238636]/20 hover:shadow-[#238636]/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                            <Plus size={18} />
-                            <span>Add Repository</span>
-                        </a>
+                        {isAtRepoLimit ? (
+                            <div className="flex items-center justify-center gap-2 bg-[#21262d] border border-yellow-500/30 px-5 py-3 rounded-xl text-sm">
+                                <span className="text-yellow-400 font-medium">Limit reached ({MAX_REPOS}/{MAX_REPOS} repos)</span>
+                            </div>
+                        ) : (
+                            <a
+                                href={githubAppUrl}
+                                className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#238636] to-[#2ea043] hover:from-[#2ea043] hover:to-[#3fb950] px-5 py-3 rounded-xl text-sm font-bold shadow-lg shadow-[#238636]/20 hover:shadow-[#238636]/40 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                                <Plus size={18} />
+                                <span>Add Repository</span>
+                                <span className="text-xs opacity-75">({activeCount}/{MAX_REPOS})</span>
+                            </a>
+                        )}
 
                         {/* Manage & Analytics - Side by side on mobile, stacked on desktop */}
                         <div className="grid grid-cols-2 lg:flex lg:flex-col gap-2">
@@ -1082,6 +1130,9 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                     }}
                 />
             )}
+
+            {/* Feedback Reminder - Shows if user has no feedback and not busy */}
+            <FeedbackReminder isBusy={isBusy} />
         </div>
     )
 }

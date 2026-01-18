@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Search, Users, GitBranch, MessageSquare, ChevronDown, ChevronUp, ExternalLink, RefreshCw, AlertCircle, Sparkles } from 'lucide-react'
+import { UsersSkeleton } from '../components/skeletons'
 
 interface Installation {
     id: string
@@ -71,15 +72,7 @@ export default function AdminUsersPage() {
     }
 
     if (loading && users.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-                <div className="relative w-12 h-12">
-                    <div className="absolute inset-0 rounded-full border-2 border-[#39d353]/20" />
-                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#39d353] animate-spin" />
-                </div>
-                <p className="text-gray-500 text-sm">Loading...</p>
-            </div>
-        )
+        return <UsersSkeleton />
     }
 
     return (

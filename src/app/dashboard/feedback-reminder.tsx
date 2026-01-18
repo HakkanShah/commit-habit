@@ -1,61 +1,92 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Rocket, Sparkles, X } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Sparkles, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface FeedbackReminderProps {
-    canShow: boolean
-    onClose: () => void
+    /** True when dashboard is busy with operations (onboarding, repo actions, etc.) */
+    isBusy: boolean
 }
 
-export function FeedbackReminder({ canShow, onClose }: FeedbackReminderProps) {
+export function FeedbackReminder({ isBusy }: FeedbackReminderProps) {
     const [isVisible, setIsVisible] = useState(false)
     const [isExiting, setIsExiting] = useState(false)
+    const [hasFeedback, setHasFeedback] = useState<boolean | null>(null) // null = loading
     const router = useRouter()
 
+    // Check if user already has feedback on mount
     useEffect(() => {
-        // Only proceed if we're allowed to show (e.g. onboarding finished)
-        // and we have a pending intent
-        if (canShow) {
-            const hasIntent = localStorage.getItem('pendingFeedbackIntent')
-
-            if (hasIntent) {
-                // Wait 10 seconds as requested
-                const timer = setTimeout(() => {
-                    setIsVisible(true)
-                }, 10000)
-
-                return () => clearTimeout(timer)
+        const checkFeedback = async () => {
+            try {
+                const res = await fetch('/api/feedback/me')
+                if (res.ok) {
+                    const data = await res.json()
+                    setHasFeedback(data.hasFeedback)
+                } else {
+                    setHasFeedback(false) // Assume no feedback on error
+                }
+            } catch {
+                setHasFeedback(false)
             }
         }
-    }, [canShow])
+        checkFeedback()
+    }, [])
 
-    const handleClose = () => {
+    // Show reminder logic: wait for not busy, no feedback, once per session
+    useEffect(() => {
+        // Still loading feedback status
+        if (hasFeedback === null) return
+
+        // Already has feedback - never show
+        if (hasFeedback) return
+
+        // Dashboard is busy - wait
+        if (isBusy) return
+
+        // Already shown this session
+        const alreadyShown = sessionStorage.getItem('feedbackReminderShown')
+        if (alreadyShown) return
+
+        // Also check if user dismissed it before (localStorage flag)
+        // This provides a "don't show again today" experience
+        const dismissedToday = localStorage.getItem('feedbackReminderDismissedAt')
+        if (dismissedToday) {
+            const dismissedTime = parseInt(dismissedToday, 10)
+            const hoursSince = (Date.now() - dismissedTime) / (1000 * 60 * 60)
+            // Don't show again within 12 hours of dismissal
+            if (hoursSince < 12) return
+        }
+
+        // All conditions met - show after 15s delay
+        const timer = setTimeout(() => {
+            setIsVisible(true)
+            sessionStorage.setItem('feedbackReminderShown', 'true')
+        }, 15000)
+
+        return () => clearTimeout(timer)
+    }, [hasFeedback, isBusy])
+
+    const handleClose = useCallback(() => {
         setIsExiting(true)
+        // Record dismissal time to prevent nagging
+        localStorage.setItem('feedbackReminderDismissedAt', Date.now().toString())
+
         setTimeout(() => {
             setIsVisible(false)
-            onClose()
-            // Clear intent on close so we don't nag again
-            localStorage.removeItem('pendingFeedbackIntent')
         }, 300)
-    }
+    }, [])
 
-    const handleAction = () => {
-        // Redirect to homepage with a query param to open the modal
-        // We'll clean up the intent now, or the homepage can check and clean it
+    const handleAction = useCallback(() => {
+        // Clear any dismissal tracking since they're taking action
+        localStorage.removeItem('feedbackReminderDismissedAt')
         localStorage.removeItem('pendingFeedbackIntent')
 
         setIsExiting(true)
         setTimeout(() => {
-            // Use window.location to ensure full reload if needed, 
-            // but router.push is better for SPA feel. 
-            // However, homepage modal state defaults to false. 
-            // We need a way to tell homepage to open modal.
-            // Let's use a URL param: `?openFeedback=true`
             router.push('/?openFeedback=true')
         }, 300)
-    }
+    }, [router])
 
     if (!isVisible) return null
 
@@ -75,7 +106,7 @@ export function FeedbackReminder({ canShow, onClose }: FeedbackReminderProps) {
                 className={`relative w-full max-w-md bg-[#0d1117] border-2 border-[#f2cc60] rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(242,204,96,0.2)] transform transition-all duration-300 ${!isExiting ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
                     }`}
             >
-                {/* Background Texture from homepage style */}
+                {/* Background Texture */}
                 <div
                     className="absolute inset-0 opacity-20"
                     style={{
@@ -88,7 +119,7 @@ export function FeedbackReminder({ canShow, onClose }: FeedbackReminderProps) {
                 <div className="relative p-8 text-center">
                     <button
                         onClick={handleClose}
-                        className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+                        className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors cursor-pointer"
                     >
                         <X size={20} />
                     </button>
@@ -97,18 +128,20 @@ export function FeedbackReminder({ canShow, onClose }: FeedbackReminderProps) {
                         <span className="text-3xl">🎨</span>
                     </div>
 
-                    <h2 className="text-3xl font-black text-white mb-2 tracking-wide font-['Permanent_Marker']"
-                        style={{ textShadow: '2px 2px 0 #000' }}>
-                        WAIT A SEC!
+                    <h2
+                        className="text-3xl font-black text-white mb-2 tracking-wide font-['Permanent_Marker']"
+                        style={{ textShadow: '2px 2px 0 #000' }}
+                    >
+                        LEAVE YOUR MARK!
                     </h2>
 
                     <p className="text-[#8b949e] mb-8 text-lg">
-                        You forgot to leave your mark on the wall!
+                        Share your experience and join our Wall of Love 🧱
                     </p>
 
                     <button
                         onClick={handleAction}
-                        className="w-full relative group overflow-hidden rounded-xl bg-[#f2cc60] py-4 font-bold text-black transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                        className="w-full relative group overflow-hidden rounded-xl bg-[#f2cc60] py-4 font-bold text-black transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                     >
                         <span className="relative z-10 flex items-center justify-center gap-2">
                             <span>ADD YOUR WALL</span>
@@ -119,7 +152,10 @@ export function FeedbackReminder({ canShow, onClose }: FeedbackReminderProps) {
                         <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-500" />
                     </button>
 
-                    <p className="mt-4 text-xs text-[#8b949e] cursor-pointer hover:text-white transition-colors" onClick={handleClose}>
+                    <p
+                        className="mt-4 text-xs text-[#8b949e] cursor-pointer hover:text-white transition-colors"
+                        onClick={handleClose}
+                    >
                         Maybe later
                     </p>
                 </div>

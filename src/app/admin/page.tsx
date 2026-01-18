@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Users, MessageSquare, GitCommit, Activity, Clock, TrendingUp, RefreshCw, AlertCircle, ArrowRight, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { DashboardSkeleton } from './components/skeletons'
 
 interface GlobalStats {
     totalUsers: number
@@ -29,14 +30,22 @@ export default function AdminDashboard() {
     async function fetchData() {
         try {
             setRefreshing(true)
-            const usersRes = await fetch('/api/admin/users?limit=1')
-            if (!usersRes.ok) throw new Error('Failed to fetch stats')
-            const usersData = await usersRes.json()
-            setStats(usersData.globalStats)
 
-            const auditRes = await fetch('/api/admin/audit?limit=8')
+            // Fetch both APIs in parallel for faster loading
+            const [usersRes, auditRes] = await Promise.all([
+                fetch('/api/admin/users?limit=1'),
+                fetch('/api/admin/audit?limit=8')
+            ])
+
+            if (!usersRes.ok) throw new Error('Failed to fetch stats')
             if (!auditRes.ok) throw new Error('Failed to fetch activity')
-            const auditData = await auditRes.json()
+
+            const [usersData, auditData] = await Promise.all([
+                usersRes.json(),
+                auditRes.json()
+            ])
+
+            setStats(usersData.globalStats)
             setRecentActivity(auditData.logs || [])
             setError(null)
         } catch (err) {
@@ -50,15 +59,21 @@ export default function AdminDashboard() {
     useEffect(() => { fetchData() }, [])
 
     const formatAction = (action: string) => {
-        const map: Record<string, string> = {
-            'LOGIN': '🔐 User logged in',
-            'LOGOUT': '👋 User logged out',
-            'TESTIMONIAL_SUBMITTED': '💬 New testimonial',
-            'TESTIMONIAL_APPROVED': '✅ Testimonial approved',
-            'TESTIMONIAL_REJECTED': '❌ Testimonial rejected',
-            'REPO_ADDED': '📁 Repository added',
+        const map: Record<string, { text: string; icon: string }> = {
+            'LOGIN': { text: 'logged in', icon: '🔐' },
+            'LOGOUT': { text: 'logged out', icon: '👋' },
+            'SIGNUP': { text: 'joined', icon: '🎉' },
+            'USER_CREATED': { text: 'signed up', icon: '👤' },
+            'TESTIMONIAL_SUBMITTED': { text: 'submitted feedback', icon: '💬' },
+            'TESTIMONIAL_APPROVED': { text: 'feedback approved', icon: '✅' },
+            'TESTIMONIAL_REJECTED': { text: 'feedback rejected', icon: '❌' },
+            'TESTIMONIAL_EDITED': { text: 'feedback edited', icon: '✏️' },
+            'REPO_ADDED': { text: 'added a repo', icon: '📁' },
+            'REPO_REMOVED': { text: 'removed a repo', icon: '🗑️' },
+            'PAUSE': { text: 'paused automation', icon: '⏸️' },
+            'RESUME': { text: 'resumed automation', icon: '▶️' },
         }
-        return map[action] || action.replace(/_/g, ' ').toLowerCase().replace(/^\w/, c => c.toUpperCase())
+        return map[action] || { text: action.replace(/_/g, ' ').toLowerCase(), icon: '📌' }
     }
 
     const formatTimeAgo = (dateString: string) => {
@@ -72,15 +87,7 @@ export default function AdminDashboard() {
     }
 
     if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-                <div className="relative w-12 h-12">
-                    <div className="absolute inset-0 rounded-full border-2 border-[#39d353]/20" />
-                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#39d353] animate-spin" />
-                </div>
-                <p className="text-gray-500 text-sm">Loading...</p>
-            </div>
-        )
+        return <DashboardSkeleton />
     }
 
     if (error) {
@@ -117,10 +124,10 @@ export default function AdminDashboard() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3">
-                <StatCard icon={<Users className="w-5 h-5" />} label="Users" value={stats?.totalUsers ?? 0} color="blue" />
-                <StatCard icon={<Activity className="w-5 h-5" />} label="Repos" value={stats?.activeInstallations ?? 0} color="green" />
-                <StatCard icon={<MessageSquare className="w-5 h-5" />} label="Pending" value={stats?.pendingTestimonials ?? 0} color="yellow" href="/admin/feedback" />
-                <StatCard icon={<GitCommit className="w-5 h-5" />} label="Commits" value={stats?.totalAutoCommits ?? 0} color="purple" />
+                <StatCard icon={<Users className="w-5 h-5" />} label="Total Users" value={stats?.totalUsers ?? 0} color="blue" href="/admin/users" />
+                <StatCard icon={<Activity className="w-5 h-5" />} label="Active Repos" value={stats?.activeInstallations ?? 0} color="green" />
+                <StatCard icon={<MessageSquare className="w-5 h-5" />} label="Pending Reviews" value={stats?.pendingTestimonials ?? 0} color="yellow" href="/admin/feedback" />
+                <StatCard icon={<GitCommit className="w-5 h-5" />} label="Auto Commits" value={stats?.totalAutoCommits ?? 0} color="purple" />
             </div>
 
             {/* Quick Actions - Mobile */}
@@ -157,18 +164,26 @@ export default function AdminDashboard() {
                     </div>
                 ) : (
                     <div className="divide-y divide-white/5">
-                        {recentActivity.map((a) => (
-                            <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
-                                <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center shrink-0">
-                                    <TrendingUp className="w-3.5 h-3.5 text-gray-500" />
+                        {recentActivity.map((a) => {
+                            const actionInfo = formatAction(a.action)
+                            return (
+                                <div key={a.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer">
+                                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 text-sm">
+                                        {actionInfo.icon}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm">
+                                            <span className="font-medium text-white">{a.user?.name || 'Unknown'}</span>
+                                            <span className="text-gray-500"> {actionInfo.text}</span>
+                                        </p>
+                                        {a.user?.email && (
+                                            <p className="text-xs text-gray-600 truncate">{a.user.email}</p>
+                                        )}
+                                    </div>
+                                    <span className="text-[10px] text-gray-600 shrink-0 bg-white/5 px-2 py-0.5 rounded-full">{formatTimeAgo(a.createdAt)}</span>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm truncate">{formatAction(a.action)}</p>
-                                    <p className="text-xs text-gray-600 truncate">{a.user?.name || a.user?.email || 'Unknown'}</p>
-                                </div>
-                                <span className="text-[10px] text-gray-600 shrink-0">{formatTimeAgo(a.createdAt)}</span>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 )}
             </div>
@@ -185,12 +200,20 @@ function StatCard({ icon, label, value, color, href }: { icon: React.ReactNode; 
     }
 
     const Card = (
-        <div className={`relative overflow-hidden bg-white/[0.02] border border-white/5 rounded-xl p-4 transition-all ${href ? 'cursor-pointer hover:bg-white/[0.04] active:scale-[0.98]' : ''}`}>
+        <div className={`relative overflow-hidden bg-white/[0.02] border border-white/5 rounded-xl p-4 transition-all ${href ? 'cursor-pointer hover:bg-white/[0.04] hover:border-white/10 active:scale-[0.98]' : ''}`}>
             <div className={`absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br ${colors[color]} opacity-10 blur-2xl`} />
-            <div className={`inline-flex p-2 rounded-lg bg-gradient-to-br ${colors[color]} mb-2`}>{icon}</div>
-            <p className="text-2xl font-bold">{value.toLocaleString()}</p>
-            <p className="text-xs text-gray-500">{label}</p>
-            {href && <ArrowRight className="absolute bottom-3 right-3 w-4 h-4 text-gray-600" />}
+            <div className="flex items-center justify-between">
+                <div>
+                    <div className="flex items-center gap-1 mb-1">
+                        <p className="text-xs text-gray-500">{label}</p>
+                        {href && <ArrowRight className="w-3 h-3 text-gray-600 hidden sm:block" />}
+                    </div>
+                    <p className="text-2xl font-bold tabular-nums">{value.toLocaleString()}</p>
+                </div>
+                <div className={`p-2.5 rounded-xl bg-gradient-to-br ${colors[color]} bg-opacity-20`}>
+                    {icon}
+                </div>
+            </div>
         </div>
     )
     return href ? <Link href={href}>{Card}</Link> : Card

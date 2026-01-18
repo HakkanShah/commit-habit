@@ -1,10 +1,23 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useMemo, useEffect, useState } from 'react'
+
+// Generate stable random values for particles (only runs once)
+function generateParticleConfig(count: number) {
+    return Array.from({ length: count }, () => ({
+        initialX: Math.random() * 1000,
+        animateX: Math.random() * 1000,
+        duration: Math.random() * 3 + 2,
+        delay: Math.random() * 2,
+    }))
+}
 
 export function Particles() {
     const [mounted, setMounted] = useState(false)
+
+    // Generate particle configs once on mount (stable across re-renders)
+    const particleConfigs = useMemo(() => generateParticleConfig(5), [])
 
     useEffect(() => {
         setMounted(true)
@@ -14,20 +27,20 @@ export function Particles() {
 
     return (
         <>
-            {[...Array(5)].map((_, i) => (
+            {particleConfigs.map((config, i) => (
                 <motion.div
                     key={i}
                     className="absolute w-1 h-1 bg-[#39d353] rounded-full"
-                    initial={{ opacity: 0, y: 100, x: Math.random() * 1000 }}
+                    initial={{ opacity: 0, y: 100, x: config.initialX }}
                     animate={{
                         opacity: [0, 1, 0],
                         y: -100,
-                        x: Math.random() * 1000
+                        x: config.animateX
                     }}
                     transition={{
-                        duration: Math.random() * 3 + 2,
+                        duration: config.duration,
                         repeat: Infinity,
-                        delay: Math.random() * 2,
+                        delay: config.delay,
                         ease: "linear"
                     }}
                 />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Check, X, Edit3, Star, Clock, ExternalLink, MessageSquare, RefreshCw, AlertCircle, Sparkles } from 'lucide-react'
+import { FeedbackSkeleton } from '../components/skeletons'
 
 interface Testimonial {
     id: string
@@ -91,15 +92,7 @@ export default function AdminFeedbackPage() {
     }
 
     if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-                <div className="relative w-12 h-12">
-                    <div className="absolute inset-0 rounded-full border-2 border-[#39d353]/20" />
-                    <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#39d353] animate-spin" />
-                </div>
-                <p className="text-gray-500 text-sm">Loading...</p>
-            </div>
-        )
+        return <FeedbackSkeleton />
     }
 
     return (
@@ -131,8 +124,8 @@ export default function AdminFeedbackPage() {
                         key={s}
                         onClick={() => setStatusFilter(s === 'ALL' ? '' : s)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${(s === 'ALL' && !statusFilter) || statusFilter === s
-                                ? 'bg-[#39d353] text-black'
-                                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                            ? 'bg-[#39d353] text-black'
+                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
                             }`}
                     >
                         {s}
@@ -226,7 +219,7 @@ export default function AdminFeedbackPage() {
                                     </div>
                                 ) : (
                                     <div className="bg-black/20 rounded-lg p-3 border border-white/5">
-                                        <p className="text-gray-200 text-sm leading-relaxed">"{t.content}"</p>
+                                        <p className="text-gray-200 text-sm leading-relaxed">&quot;{t.content}&quot;</p>
                                     </div>
                                 )}
                             </div>

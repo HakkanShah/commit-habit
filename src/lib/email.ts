@@ -688,3 +688,102 @@ Submitted: ${timestamp}
         return false
     }
 }
+
+// ============================================================================
+// Admin Custom Email
+// ============================================================================
+
+export interface CustomEmailResult {
+    success: boolean
+    error?: string
+}
+
+/**
+ * Send a custom email to a user (for admin broadcast)
+ */
+export async function sendCustomEmail(
+    to: string,
+    subject: string,
+    body: string,
+    isHtml: boolean = true
+): Promise<CustomEmailResult> {
+    const transporter = createTransporter()
+
+    if (!transporter) {
+        return { success: false, error: 'SMTP not configured' }
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://commithabit.app'
+
+    const htmlContent = isHtml ? `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d1117; color: #c9d1d9;">
+    <!-- Main Container -->
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #0d1117;">
+        <tr>
+            <td align="center" style="padding: 0;">
+                
+                <!-- Content Table (Full Width) -->
+                <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #161b22; border-bottom: 1px solid #30363d;">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 24px; text-align: center; border-bottom: 1px solid #30363d;">
+                            <div style="font-size: 24px; font-weight: 900; color: white;">
+                                C<span style="color: #39d353;">●</span>mmit<span style="color: #39d353;">Habit</span>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 32px 20px;">
+                            <div style="color: #c9d1d9; font-size: 16px; line-height: 1.6; width: 100%; max-width: 100%;">
+                                ${body}
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 30px 20px; text-align: center; background-color: #0d1117;">
+                            <p style="color: #6b7280; font-size: 12px; margin: 0;">
+                                © 2026 CommitHabit • <a href="${appUrl}" style="color: #58a6ff; text-decoration: none;">commithabit.app</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+` : undefined
+
+    try {
+        await transporter.sendMail({
+            from: FROM_EMAIL,
+            to,
+            subject,
+            text: isHtml ? body.replace(/<[^>]*>/g, '') : body, // Strip HTML for text version
+            html: htmlContent,
+        })
+
+        return { success: true }
+    } catch (error) {
+        console.error('[EMAIL] Failed to send custom email:', error)
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        }
+    }
+}
+

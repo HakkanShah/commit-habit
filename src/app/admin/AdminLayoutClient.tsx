@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { Menu, X, LayoutDashboard, Users, MessageSquare, LogOut, ChevronRight } from 'lucide-react'
+import { Menu, X, LayoutDashboard, Users, MessageSquare, LogOut, ChevronRight, Mail } from 'lucide-react'
 
 export function AdminLayoutClient({
     children,
@@ -34,6 +34,7 @@ export function AdminLayoutClient({
         { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
         { href: '/admin/users', icon: Users, label: 'Users' },
         { href: '/admin/feedback', icon: MessageSquare, label: 'Testimonials' },
+        { href: '/admin/email', icon: Mail, label: 'Email' },
     ]
 
     const isActive = (href: string) => {
@@ -99,8 +100,8 @@ export function AdminLayoutClient({
                                 key={href}
                                 href={href}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive(href)
-                                        ? 'bg-[#39d353]/10 text-[#39d353]'
-                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-[#39d353]/10 text-[#39d353]'
+                                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
                                     }`}
                             >
                                 <Icon className="w-5 h-5" />
@@ -151,8 +152,8 @@ export function AdminLayoutClient({
                                     key={href}
                                     href={href}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive(href)
-                                            ? 'bg-gradient-to-r from-[#39d353]/20 to-transparent text-[#39d353]'
-                                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                        ? 'bg-gradient-to-r from-[#39d353]/20 to-transparent text-[#39d353]'
+                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
                                         }`}
                                 >
                                     <Icon className="w-5 h-5" />
