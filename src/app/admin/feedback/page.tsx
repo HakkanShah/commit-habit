@@ -131,8 +131,8 @@ export default function AdminFeedbackPage() {
                         key={s}
                         onClick={() => setStatusFilter(s === 'ALL' ? '' : s)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${(s === 'ALL' && !statusFilter) || statusFilter === s
-                                ? 'bg-[#39d353] text-black'
-                                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                            ? 'bg-[#39d353] text-black'
+                            : 'bg-white/5 text-gray-400 hover:bg-white/10'
                             }`}
                     >
                         {s}
@@ -226,7 +226,7 @@ export default function AdminFeedbackPage() {
                                     </div>
                                 ) : (
                                     <div className="bg-black/20 rounded-lg p-3 border border-white/5">
-                                        <p className="text-gray-200 text-sm leading-relaxed">"{t.content}"</p>
+                                        <p className="text-gray-200 text-sm leading-relaxed">&quot;{t.content}&quot;</p>
                                     </div>
                                 )}
                             </div>
