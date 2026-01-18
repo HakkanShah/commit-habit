@@ -8,6 +8,7 @@ import {
     logError,
     createErrorResponse,
 } from '@/lib/errors'
+import { MAX_REPOS_PER_USER } from '@/lib/limits'
 
 // ============================================================================
 // Configuration
@@ -180,7 +181,7 @@ async function upsertInstallation(
     installationId: number,
     userId: string,
     repo: GitHubRepository
-): Promise<'created' | 'reactivated' | 'exists'> {
+): Promise<'created' | 'reactivated' | 'exists' | 'limit_reached'> {
     try {
         // Check if installation already exists
         const existing = await prisma.installation.findUnique({
@@ -198,7 +199,16 @@ async function upsertInstallation(
                 console.log(`[WEBHOOK] Repo ${repo.full_name} already added and active`)
                 return 'exists'
             } else {
-                // Exists but inactive - reactivate it
+                // Exists but inactive - check limit before reactivating
+                const activeCount = await prisma.installation.count({
+                    where: { userId, active: true }
+                })
+
+                if (activeCount >= MAX_REPOS_PER_USER) {
+                    console.log(`[WEBHOOK] User ${userId} at limit (${MAX_REPOS_PER_USER}), cannot reactivate ${repo.full_name}`)
+                    return 'limit_reached'
+                }
+
                 await prisma.installation.update({
                     where: { id: existing.id },
                     data: { active: true, repoFullName: repo.full_name },
@@ -206,6 +216,16 @@ async function upsertInstallation(
                 console.log(`[WEBHOOK] Reactivated repo ${repo.full_name}`)
                 return 'reactivated'
             }
+        }
+
+        // Check limit before creating new installation
+        const activeCount = await prisma.installation.count({
+            where: { userId, active: true }
+        })
+
+        if (activeCount >= MAX_REPOS_PER_USER) {
+            console.log(`[WEBHOOK] User ${userId} at limit (${MAX_REPOS_PER_USER}), skipping ${repo.full_name}`)
+            return 'limit_reached'
         }
 
         // Create new installation
@@ -247,6 +267,7 @@ async function handleInstallationEvent(data: InstallationEventPayload): Promise<
                 let newCount = 0
                 let existingCount = 0
                 let reactivatedCount = 0
+                let limitReachedCount = 0
                 let failCount = 0
 
                 for (const repo of repositories) {
@@ -254,6 +275,7 @@ async function handleInstallationEvent(data: InstallationEventPayload): Promise<
                         const result = await upsertInstallation(installation.id, user.id, repo)
                         if (result === 'created') newCount++
                         else if (result === 'reactivated') reactivatedCount++
+                        else if (result === 'limit_reached') limitReachedCount++
                         else existingCount++
                     } catch (error) {
                         failCount++
@@ -270,6 +292,7 @@ async function handleInstallationEvent(data: InstallationEventPayload): Promise<
                 if (newCount > 0) parts.push(`${newCount} new`)
                 if (reactivatedCount > 0) parts.push(`${reactivatedCount} reactivated`)
                 if (existingCount > 0) parts.push(`${existingCount} already existed`)
+                if (limitReachedCount > 0) parts.push(`${limitReachedCount} skipped (limit reached)`)
                 if (failCount > 0) parts.push(`${failCount} failed`)
 
                 console.log(`[WEBHOOK] Processed ${repositories.length} repos for user ${user.id}: ${parts.join(', ')}`)
@@ -349,6 +372,7 @@ async function handleInstallationRepositoriesEvent(data: InstallationRepositorie
         let newCount = 0
         let existingCount = 0
         let reactivatedCount = 0
+        let limitReachedCount = 0
         let failCount = 0
 
         for (const repo of repositories_added) {
@@ -356,6 +380,7 @@ async function handleInstallationRepositoriesEvent(data: InstallationRepositorie
                 const result = await upsertInstallation(installation.id, user.id, repo)
                 if (result === 'created') newCount++
                 else if (result === 'reactivated') reactivatedCount++
+                else if (result === 'limit_reached') limitReachedCount++
                 else existingCount++
             } catch (error) {
                 failCount++
@@ -371,6 +396,7 @@ async function handleInstallationRepositoriesEvent(data: InstallationRepositorie
         if (newCount > 0) parts.push(`${newCount} new`)
         if (reactivatedCount > 0) parts.push(`${reactivatedCount} reactivated`)
         if (existingCount > 0) parts.push(`${existingCount} already existed`)
+        if (limitReachedCount > 0) parts.push(`${limitReachedCount} skipped (limit reached)`)
         if (failCount > 0) parts.push(`${failCount} failed`)
 
         console.log(`[WEBHOOK] Processed repos: ${parts.join(', ')}`)
