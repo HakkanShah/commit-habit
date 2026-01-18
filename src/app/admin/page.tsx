@@ -29,14 +29,22 @@ export default function AdminDashboard() {
     async function fetchData() {
         try {
             setRefreshing(true)
-            const usersRes = await fetch('/api/admin/users?limit=1')
-            if (!usersRes.ok) throw new Error('Failed to fetch stats')
-            const usersData = await usersRes.json()
-            setStats(usersData.globalStats)
 
-            const auditRes = await fetch('/api/admin/audit?limit=8')
+            // Fetch both APIs in parallel for faster loading
+            const [usersRes, auditRes] = await Promise.all([
+                fetch('/api/admin/users?limit=1'),
+                fetch('/api/admin/audit?limit=8')
+            ])
+
+            if (!usersRes.ok) throw new Error('Failed to fetch stats')
             if (!auditRes.ok) throw new Error('Failed to fetch activity')
-            const auditData = await auditRes.json()
+
+            const [usersData, auditData] = await Promise.all([
+                usersRes.json(),
+                auditRes.json()
+            ])
+
+            setStats(usersData.globalStats)
             setRecentActivity(auditData.logs || [])
             setError(null)
         } catch (err) {

@@ -20,6 +20,9 @@ model User {
   accounts      Account[]
   testimonials  Testimonial[]
   auditLogs     AuditLog[]
+
+  @@index([createdAt])
+  @@index([lastLoginAt])
 }
 
 model Testimonial {
