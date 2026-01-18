@@ -164,3 +164,80 @@ export function FeedbackSkeleton() {
         </div>
     )
 }
+
+// Email page skeleton - shows user selection and compose area
+export function EmailSkeleton() {
+    return (
+        <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Skeleton className="w-9 h-9 rounded-lg" />
+                    <div>
+                        <Skeleton className="w-32 h-6 mb-1" />
+                        <Skeleton className="w-40 h-3 hidden sm:block" />
+                    </div>
+                </div>
+                <Skeleton className="w-9 h-9 rounded-lg" />
+            </div>
+
+            {/* Mobile Tabs */}
+            <div className="flex gap-1 p-1 bg-white/5 rounded-lg sm:hidden">
+                <Skeleton className="flex-1 h-9 rounded-md" />
+                <Skeleton className="flex-1 h-9 rounded-md" />
+            </div>
+
+            {/* Main Grid */}
+            <div className="grid lg:grid-cols-12 gap-6 h-[500px] sm:h-[600px]">
+                {/* Left: User Selection */}
+                <div className="lg:col-span-4 bg-[#161b22] border border-white/5 rounded-2xl flex flex-col overflow-hidden">
+                    {/* Search Header */}
+                    <div className="p-4 border-b border-white/5 space-y-3">
+                        <Skeleton className="w-full h-10 rounded-xl" />
+                        <div className="flex gap-2">
+                            <Skeleton className="flex-1 h-8 rounded-lg" />
+                            <Skeleton className="flex-1 h-8 rounded-lg" />
+                        </div>
+                    </div>
+
+                    {/* User List */}
+                    <div className="flex-1 p-2 space-y-1">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
+                                <Skeleton className="w-5 h-5 rounded" />
+                                <Skeleton className="w-8 h-8 rounded-full" />
+                                <div className="flex-1">
+                                    <Skeleton className="w-24 h-4 mb-1" />
+                                    <Skeleton className="w-32 h-3" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Right: Compose Area */}
+                <div className="lg:col-span-8 bg-[#161b22] border border-white/5 rounded-2xl flex flex-col overflow-hidden hidden lg:flex">
+                    <div className="flex-1 p-6 space-y-4">
+                        {/* Subject */}
+                        <Skeleton className="w-full h-10 rounded-lg" />
+
+                        {/* Body */}
+                        <Skeleton className="w-full flex-1 min-h-[200px] rounded-xl" />
+
+                        {/* Warning */}
+                        <Skeleton className="w-full h-12 rounded-xl" />
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 border-t border-white/5 flex justify-between items-center">
+                        <Skeleton className="w-32 h-4 hidden sm:block" />
+                        <div className="flex gap-3">
+                            <Skeleton className="w-24 h-10 rounded-xl" />
+                            <Skeleton className="w-28 h-10 rounded-xl" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
