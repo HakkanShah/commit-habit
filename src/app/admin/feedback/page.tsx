@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import useSWR from 'swr'
 import { Check, X, Edit3, Star, Clock, ExternalLink, MessageSquare, RefreshCw, AlertCircle, Sparkles } from 'lucide-react'
 import { FeedbackSkeleton } from '../components/skeletons'
 
@@ -20,36 +21,39 @@ interface Testimonial {
     updatedAt: string
 }
 
+// SWR fetcher
+const fetcher = (url: string) => fetch(url).then(res => {
+    if (!res.ok) throw new Error('Failed to fetch')
+    return res.json()
+})
+
+// SWR config - cache for navigation
+const swrConfig = {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000,
+    keepPreviousData: true,
+}
+
 export default function AdminFeedbackPage() {
-    const [testimonials, setTestimonials] = useState<Testimonial[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [statusFilter, setStatusFilter] = useState<string>('PENDING')
-    const [pendingCount, setPendingCount] = useState(0)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editContent, setEditContent] = useState('')
     const [actionLoading, setActionLoading] = useState<string | null>(null)
 
-    async function fetchTestimonials() {
-        try {
-            setLoading(true)
-            const params = new URLSearchParams()
-            if (statusFilter) params.set('status', statusFilter)
-            params.set('limit', '50')
-            const res = await fetch(`/api/admin/feedback?${params}`)
-            if (!res.ok) throw new Error('Failed to fetch')
-            const data = await res.json()
-            setTestimonials(data.testimonials)
-            setPendingCount(data.pendingCount)
-            setError(null)
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load')
-        } finally {
-            setLoading(false)
-        }
-    }
+    // Use SWR with statusFilter in key for caching per filter
+    const { data, error, isLoading: loading, mutate } = useSWR(
+        `/api/admin/feedback?status=${statusFilter}&limit=50`,
+        fetcher,
+        swrConfig
+    )
 
-    useEffect(() => { fetchTestimonials() }, [statusFilter])
+    const testimonials: Testimonial[] = data?.testimonials || []
+    const pendingCount = data?.pendingCount || 0
+
+    async function fetchTestimonials() {
+        await mutate()
+    }
 
     const handleApprove = async (id: string, editedContent?: string) => {
         try {
@@ -142,7 +146,7 @@ export default function AdminFeedbackPage() {
             {error && (
                 <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                     <AlertCircle className="w-4 h-4 text-red-400" />
-                    <p className="text-red-400 text-sm">{error}</p>
+                    <p className="text-red-400 text-sm">{error?.message || 'Failed to load testimonials'}</p>
                 </div>
             )}
 

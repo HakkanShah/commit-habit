@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useDeferredValue } from 'react'
+import useSWR from 'swr'
 import { Search, Users, GitBranch, MessageSquare, ChevronDown, ChevronUp, ExternalLink, RefreshCw, AlertCircle, Sparkles } from 'lucide-react'
 import { UsersSkeleton } from '../components/skeletons'
 
@@ -27,39 +28,41 @@ interface User {
     installations: Installation[]
 }
 
+// SWR fetcher
+const fetcher = (url: string) => fetch(url).then(res => {
+    if (!res.ok) throw new Error('Failed to fetch')
+    return res.json()
+})
+
+// SWR config - cache for navigation
+const swrConfig = {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000,
+    keepPreviousData: true,
+}
+
 export default function AdminUsersPage() {
-    const [users, setUsers] = useState<User[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [search, setSearch] = useState('')
     const [expandedUser, setExpandedUser] = useState<string | null>(null)
-    const [total, setTotal] = useState(0)
+
+    // Deferred search for smoother typing
+    const deferredSearch = useDeferredValue(search)
+
+    // Build SWR key with search
+    const searchParam = deferredSearch.length >= 2 ? `&search=${encodeURIComponent(deferredSearch)}` : ''
+    const { data, error, isLoading: loading, mutate } = useSWR(
+        `/api/admin/users?limit=50${searchParam}`,
+        fetcher,
+        swrConfig
+    )
+
+    const users: User[] = data?.users || []
+    const total = data?.total || 0
 
     async function fetchUsers() {
-        try {
-            setLoading(true)
-            const params = new URLSearchParams()
-            if (search && search.length >= 2) params.set('search', search)
-            params.set('limit', '50')
-            const res = await fetch(`/api/admin/users?${params}`)
-            if (!res.ok) throw new Error('Failed to fetch users')
-            const data = await res.json()
-            setUsers(data.users)
-            setTotal(data.total)
-            setError(null)
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load users')
-        } finally {
-            setLoading(false)
-        }
+        await mutate()
     }
-
-    useEffect(() => {
-        if (search === '') { fetchUsers(); return }
-        if (search.length < 2) return
-        const debounce = setTimeout(fetchUsers, 500)
-        return () => clearTimeout(debounce)
-    }, [search])
 
     const formatTimeAgo = (dateString: string | null) => {
         if (!dateString) return '—'
@@ -112,7 +115,7 @@ export default function AdminUsersPage() {
             {error && (
                 <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
                     <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                    <p className="text-red-400 text-sm">{error}</p>
+                    <p className="text-red-400 text-sm">{error?.message || 'Failed to load users'}</p>
                 </div>
             )}
 
