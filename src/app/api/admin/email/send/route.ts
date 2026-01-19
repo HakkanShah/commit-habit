@@ -74,7 +74,15 @@ export async function POST(request: NextRequest) {
                 await new Promise(resolve => setTimeout(resolve, 100))
             }
 
-            const result = await sendCustomEmail(user.email, subject, emailBody, isHtml)
+            // Replace {user} placeholder with actual user name for personalization
+            const userName = user.name || user.email?.split('@')[0] || 'there'
+            const personalizedSubject = subject.replace(/\{user\}/g, userName)
+            const personalizedBody = emailBody
+                .replace(/\{user\}/g, userName)
+                .replace(/\{appName\}/g, 'CommitHabit')
+                .replace(/\{ctaLink\}/g, process.env.NEXT_PUBLIC_APP_URL || 'https://commithabit.vercel.app')
+
+            const result = await sendCustomEmail(user.email, personalizedSubject, personalizedBody, isHtml)
 
             if (result.success) {
                 results.push({

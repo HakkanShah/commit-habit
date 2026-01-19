@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import useSWR from 'swr'
 import { Users, MessageSquare, GitCommit, Activity, Clock, TrendingUp, RefreshCw, AlertCircle, ArrowRight, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardSkeleton } from './components/skeletons'
@@ -20,43 +21,41 @@ interface RecentActivity {
     metadata: Record<string, unknown> | null
 }
 
+// SWR fetcher
+const fetcher = (url: string) => fetch(url).then(res => {
+    if (!res.ok) throw new Error('Failed to fetch')
+    return res.json()
+})
+
+// SWR config - cache for navigation, revalidate on manual refresh
+const swrConfig = {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000,
+}
+
 export default function AdminDashboard() {
-    const [stats, setStats] = useState<GlobalStats | null>(null)
-    const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [refreshing, setRefreshing] = useState(false)
 
+    // Use SWR for cached data fetching
+    const { data: usersData, error: usersError, isLoading: usersLoading, mutate: mutateUsers } = useSWR(
+        '/api/admin/users?limit=1', fetcher, swrConfig
+    )
+    const { data: auditData, error: auditError, isLoading: auditLoading, mutate: mutateAudit } = useSWR(
+        '/api/admin/audit?limit=8', fetcher, swrConfig
+    )
+
+    const stats: GlobalStats | null = usersData?.globalStats || null
+    const recentActivity: RecentActivity[] = auditData?.logs || []
+    const loading = usersLoading || auditLoading
+    const error = usersError || auditError ? 'Failed to load data' : null
+
     async function fetchData() {
-        try {
-            setRefreshing(true)
-
-            // Fetch both APIs in parallel for faster loading
-            const [usersRes, auditRes] = await Promise.all([
-                fetch('/api/admin/users?limit=1'),
-                fetch('/api/admin/audit?limit=8')
-            ])
-
-            if (!usersRes.ok) throw new Error('Failed to fetch stats')
-            if (!auditRes.ok) throw new Error('Failed to fetch activity')
-
-            const [usersData, auditData] = await Promise.all([
-                usersRes.json(),
-                auditRes.json()
-            ])
-
-            setStats(usersData.globalStats)
-            setRecentActivity(auditData.logs || [])
-            setError(null)
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load data')
-        } finally {
-            setLoading(false)
-            setRefreshing(false)
-        }
+        setRefreshing(true)
+        await Promise.all([mutateUsers(), mutateAudit()])
+        setRefreshing(false)
     }
 
-    useEffect(() => { fetchData() }, [])
 
     const formatAction = (action: string) => {
         const map: Record<string, { text: string; icon: string }> = {

@@ -754,7 +754,7 @@ export async function sendCustomEmail(
                     <tr>
                         <td style="padding: 30px 20px; text-align: center; background-color: #0d1117;">
                             <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                                © 2026 CommitHabit • <a href="${appUrl}" style="color: #58a6ff; text-decoration: none;">commithabit.app</a>
+                                © 2026 CommitHabit • <a href="${appUrl}" style="color: #58a6ff; text-decoration: none;">CommitHabit</a>
                             </p>
                         </td>
                     </tr>

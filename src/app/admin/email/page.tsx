@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
-import { Mail, Search, Users, Send, AlertCircle, CheckCircle, XCircle, Eye, X, RefreshCw, ChevronLeft } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import useSWR from 'swr'
+import { Mail, Search, Users, Send, AlertCircle, CheckCircle, XCircle, Eye, X, RefreshCw, ChevronLeft, Wand2, Sparkles, Loader2, Pencil } from 'lucide-react'
 import { EmailSkeleton } from '../components/skeletons'
 
 interface User {
@@ -18,9 +19,20 @@ interface SendResult {
     error?: string
 }
 
+// SWR fetcher
+const fetcher = (url: string) => fetch(url).then(res => {
+    if (!res.ok) throw new Error('Failed to fetch')
+    return res.json()
+})
+
+// SWR config - cache for navigation
+const swrConfig = {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    dedupingInterval: 60000,
+}
+
 export default function AdminEmailPage() {
-    const [users, setUsers] = useState<User[]>([])
-    const [loading, setLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -38,22 +50,25 @@ export default function AdminEmailPage() {
     const [sending, setSending] = useState(false)
     const [results, setResults] = useState<SendResult[] | null>(null)
 
-    // Fetch users
-    const fetchUsers = async () => {
-        try {
-            setLoading(true)
-            const res = await fetch('/api/admin/users?limit=500')
-            if (!res.ok) throw new Error('Failed to fetch')
-            const data = await res.json()
-            setUsers(data.users || [])
-        } catch (error) {
-            console.error(error)
-        } finally {
-            setLoading(false)
-        }
-    }
+    // AI Writer State
+    const [showAiModal, setShowAiModal] = useState(false)
+    const [aiPrompt, setAiPrompt] = useState('')
+    const [aiGenerating, setAiGenerating] = useState(false)
+    const [aiSource, setAiSource] = useState<'gemini' | 'template' | null>(null)
+    const [aiModel, setAiModel] = useState<string | null>(null)
+    const [aiError, setAiError] = useState<string | null>(null)
+    const [aiWarning, setAiWarning] = useState<string | null>(null)
 
-    useEffect(() => { fetchUsers() }, [])
+    // Preview State
+    const [previewEditMode, setPreviewEditMode] = useState(false)
+
+    // Use SWR for cached user fetching
+    const { data, isLoading: loading, mutate } = useSWR('/api/admin/users?limit=500', fetcher, swrConfig)
+    const users: User[] = data?.users || []
+
+    const fetchUsers = async () => {
+        await mutate()
+    }
 
     // Filtered users
     const filteredUsers = useMemo(() => {
@@ -115,6 +130,53 @@ export default function AdminEmailPage() {
         } finally {
             setSending(false)
             setConfirmText('')
+        }
+    }
+
+    // AI Generate Email
+    const handleAiGenerate = async () => {
+        if (!aiPrompt.trim()) return
+
+        setAiGenerating(true)
+        setAiError(null)
+        setAiWarning(null)
+
+        try {
+            const res = await fetch('/api/admin/email/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: aiPrompt,
+                    variables: {
+                        user: '{user}',
+                        appName: 'CommitHabit',
+                        ctaLink: process.env.NEXT_PUBLIC_APP_URL || 'https://commithabit.app'
+                    }
+                })
+            })
+
+            const data = await res.json()
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Generation failed')
+            }
+
+            setSubject(data.subject)
+            setBody(data.body)
+            setAiSource(data.source)
+            setAiModel(data.model || null)
+
+            // Show warning if AI fell back to template
+            if (data.error) {
+                setAiWarning(data.error)
+            }
+
+            setShowAiModal(false)
+            setAiPrompt('')
+        } catch (error) {
+            setAiError(error instanceof Error ? error.message : 'Failed to generate')
+        } finally {
+            setAiGenerating(false)
         }
     }
 
@@ -255,14 +317,24 @@ export default function AdminEmailPage() {
                             <span className="text-sm">Back to recipients</span>
                         </div>
 
-                        <div>
-                            <input
-                                type="text"
-                                placeholder="Subject line"
-                                value={subject}
-                                onChange={e => setSubject(e.target.value)}
-                                className="w-full bg-transparent border-0 border-b border-white/10 px-0 py-2 text-xl font-bold focus:ring-0 focus:border-[#39d353] placeholder:text-gray-600 transition-colors"
-                            />
+                        {/* Subject + AI Write Row */}
+                        <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                                <input
+                                    type="text"
+                                    placeholder="Subject line"
+                                    value={subject}
+                                    onChange={e => setSubject(e.target.value)}
+                                    className="w-full bg-transparent border-0 border-b border-white/10 px-0 py-2 text-xl font-bold focus:ring-0 focus:border-[#39d353] placeholder:text-gray-600 transition-colors"
+                                />
+                            </div>
+                            <button
+                                onClick={() => setShowAiModal(true)}
+                                className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium transition-all shadow-lg shadow-purple-500/20"
+                            >
+                                <Wand2 className="w-4 h-4" />
+                                <span className="hidden sm:inline">AI Write</span>
+                            </button>
                         </div>
 
                         <div className="flex-1 bg-[#0d1117]/50 rounded-xl border border-white/5 p-1 min-h-[50vh] sm:min-h-0 flex flex-col">
@@ -286,6 +358,17 @@ export default function AdminEmailPage() {
                             <div className="flex items-center gap-2 text-yellow-500 text-sm bg-yellow-500/10 px-4 py-3 rounded-xl border border-yellow-500/20">
                                 <AlertCircle className="w-4 h-4" />
                                 <span>{selectedIds.size - usersWithEmail.length} selected users have no email and will be skipped</span>
+                            </div>
+                        )}
+
+                        {/* AI Warning (when template fallback was used) */}
+                        {aiWarning && (
+                            <div className="flex items-center gap-2 text-orange-400 text-sm bg-orange-500/10 px-4 py-3 rounded-xl border border-orange-500/20">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                <span>{aiWarning}</span>
+                                <button onClick={() => setAiWarning(null)} className="ml-auto text-orange-300 hover:text-white">
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
                         )}
                     </div>
@@ -376,35 +459,79 @@ export default function AdminEmailPage() {
                             {/* Notch */}
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[40%] h-8 bg-[#2a2a2a] rounded-b-3xl z-20"></div>
 
+                            {/* Edit Icon - Top Right */}
+                            <button
+                                onClick={() => setPreviewEditMode(!previewEditMode)}
+                                className={`absolute top-10 right-3 z-30 p-2 rounded-lg transition-all ${previewEditMode
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+                                    }`}
+                                title={previewEditMode ? 'Exit edit mode' : 'Edit content'}
+                            >
+                                <Pencil className="w-4 h-4" />
+                            </button>
+
                             {/* Screen Content */}
-                            <div className="flex-1 bg-[#0d1117] overflow-hidden pt-8">
-                                <iframe
-                                    srcDoc={`
+                            <div className="flex-1 bg-[#0d1117] overflow-auto pt-8 custom-scrollbar">
+                                {previewEditMode ? (
+                                    /* Editable Mode: ContentEditable div */
+                                    <div className="w-full min-h-full" style={{ backgroundColor: '#0d1117' }}>
+                                        <table role="presentation" cellPadding="0" cellSpacing="0" style={{ width: '100%', backgroundColor: '#0d1117' }}>
+                                            <tbody>
+                                                <tr>
+                                                    <td align="center" style={{ padding: 0, verticalAlign: 'top' }}>
+                                                        <table role="presentation" cellPadding="0" cellSpacing="0" style={{ width: '100%', backgroundColor: '#161b22', borderBottom: '1px solid #30363d' }}>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td style={{ padding: '20px 16px', textAlign: 'center', borderBottom: '1px solid #30363d' }}>
+                                                                        <div style={{ fontSize: '22px', fontWeight: 900, color: 'white' }}>
+                                                                            C<span style={{ color: '#39d353' }}>●</span>mmit<span style={{ color: '#39d353' }}>Habit</span>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td style={{ padding: '24px 16px' }}>
+                                                                        <div
+                                                                            contentEditable
+                                                                            suppressContentEditableWarning
+                                                                            onBlur={(e) => setBody(e.currentTarget.innerHTML)}
+                                                                            dangerouslySetInnerHTML={{ __html: body || '<span style="color: #6b7280; font-style: italic;">(Click to edit)</span>' }}
+                                                                            style={{ color: '#c9d1d9', fontSize: '15px', lineHeight: 1.6, wordWrap: 'break-word', outline: 'none', minHeight: '100px' }}
+                                                                            className="focus:ring-2 focus:ring-green-500/30 rounded-lg p-2 -m-2"
+                                                                        />
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td style={{ padding: '24px 16px', textAlign: 'center', backgroundColor: '#0d1117' }}>
+                                                                        <p style={{ color: '#6b7280', fontSize: '11px', margin: 0 }}>
+                                                                            © 2026 CommitHabit • <a href="https://commithabit.vercel.app" style={{ color: '#58a6ff', textDecoration: 'none' }}>CommitHabit</a>
+                                                                        </p>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    /* View Mode: Iframe */
+                                    <iframe
+                                        srcDoc={`
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        /* Custom scrollbar - apply to html for outer scroll */
         html, body {
             scrollbar-width: thin;
             scrollbar-color: #30363d #161b22;
         }
-        html::-webkit-scrollbar, body::-webkit-scrollbar { 
-            width: 8px; 
-        }
-        html::-webkit-scrollbar-track, body::-webkit-scrollbar-track { 
-            background: #161b22; 
-        }
-        html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb { 
-            background: linear-gradient(180deg, #484f58 0%, #30363d 100%); 
-            border-radius: 4px; 
-        }
-        html::-webkit-scrollbar-thumb:hover, body::-webkit-scrollbar-thumb:hover { 
-            background: linear-gradient(180deg, #6e7681 0%, #484f58 100%); 
-        }
-        
+        html::-webkit-scrollbar, body::-webkit-scrollbar { width: 8px; }
+        html::-webkit-scrollbar-track, body::-webkit-scrollbar-track { background: #161b22; }
+        html::-webkit-scrollbar-thumb, body::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #484f58 0%, #30363d 100%); border-radius: 4px; }
         img { max-width: 100%; height: auto; }
         * { box-sizing: border-box; }
     </style>
@@ -431,7 +558,7 @@ export default function AdminEmailPage() {
                     <tr>
                         <td style="padding: 24px 16px; text-align: center; background-color: #0d1117;">
                             <p style="color: #6b7280; font-size: 11px; margin: 0;">
-                                © 2026 CommitHabit • <a href="#" style="color: #58a6ff; text-decoration: none;">commithabit.app</a>
+                                © 2026 CommitHabit • <a href="https://commithabit.vercel.app" style="color: #58a6ff; text-decoration: none;">CommitHabit</a>
                             </p>
                         </td>
                     </tr>
@@ -441,10 +568,11 @@ export default function AdminEmailPage() {
     </table>
 </body>
 </html>
-                                    `}
-                                    className="w-full h-full border-0"
-                                    title="Email Preview"
-                                />
+                                        `}
+                                        className="w-full h-full border-0"
+                                        title="Email Preview"
+                                    />
+                                )}
                             </div>
 
                             {/* Home Indicator */}
@@ -508,7 +636,7 @@ export default function AdminEmailPage() {
         <tr>
             <td style="padding: 24px 20px; text-align: center; background-color: #0d1117;">
                 <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                    © 2026 CommitHabit • <a href="#" style="color: #58a6ff; text-decoration: none;">commithabit.app</a>
+                    © 2026 CommitHabit • <a href="#" style="color: #58a6ff; text-decoration: none;">commithabit.vercel.app</a>
                 </p>
             </td>
         </tr>
@@ -562,6 +690,86 @@ export default function AdminEmailPage() {
                                 className="w-full py-3 text-gray-500 hover:text-white text-sm font-medium transition-colors"
                             >
                                 Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* AI Writer Modal */}
+            {showAiModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+                    <div className="bg-[#161b22] border border-white/10 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-5 border-b border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
+                                    <Wand2 className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white">AI Email Writer</h3>
+                                    <p className="text-xs text-gray-500">Describe what you want to send</p>
+                                </div>
+                            </div>
+                            <button onClick={() => { setShowAiModal(false); setAiError(null) }} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-4 sm:p-5 space-y-4">
+                            <textarea
+                                value={aiPrompt}
+                                onChange={e => setAiPrompt(e.target.value)}
+                                placeholder="Example: Write a feedback request email asking users to share their experience with CommitHabit. Keep it friendly and include a CTA button."
+                                className="w-full h-28 sm:h-32 bg-[#0d1117] border border-white/10 rounded-xl p-3 sm:p-4 text-sm resize-none focus:border-purple-500/50 focus:outline-none placeholder:text-gray-600 custom-scrollbar"
+                            />
+
+                            {/* Quick Templates */}
+                            <div className="grid grid-cols-2 gap-2">
+                                {['Feedback Request', 'New Feature Update', 'Announcement', 'Promotion'].map(template => (
+                                    <button
+                                        key={template}
+                                        onClick={() => setAiPrompt(`Write a ${template.toLowerCase()} email for CommitHabit users. Make it engaging and include a CTA button.`)}
+                                        className="px-3 py-2 text-xs bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors text-center"
+                                    >
+                                        {template}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Error */}
+                            {aiError && (
+                                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/20">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    <span>{aiError}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 sm:p-5 border-t border-white/5 bg-[#0d1117]/30 flex flex-col-reverse sm:flex-row gap-3">
+                            <button
+                                onClick={() => { setShowAiModal(false); setAiError(null) }}
+                                className="sm:flex-1 py-3 text-gray-400 hover:text-white text-sm font-medium transition-colors rounded-xl hover:bg-white/5"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAiGenerate}
+                                disabled={!aiPrompt.trim() || aiGenerating}
+                                className="sm:flex-1 py-3.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-xl text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                            >
+                                {aiGenerating ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-4 h-4" />
+                                        Generate Email
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
