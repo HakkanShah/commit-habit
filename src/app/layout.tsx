@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
@@ -35,6 +36,23 @@ export const metadata: Metadata = {
   authors: [{ name: "Commit Habit", url: "https://commithabit.vercel.app" }],
   creator: "Commit Habit",
   publisher: "Commit Habit",
+  applicationName: 'Commit Habit',
+  referrer: 'origin-when-cross-origin',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  alternates: {
+    canonical: '/',
+  },
+  verification: {
+    google: 'google-site-verification-placeholder',
+    yandex: 'yandex-verification-placeholder',
+    other: {
+      'msvalidate.01': 'bing-verification-placeholder',
+    },
+  },
   robots: {
     index: true,
     follow: true,
@@ -56,14 +74,14 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/logo.png",
-        width: 512,
-        height: 512,
+        width: 1200,
+        height: 630,
         alt: "Commit Habit Logo",
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Commit Habit - Build Your GitHub Activity Streak",
     description: "Automate your GitHub contributions safely. No PAT required, open source, and free.",
     images: ["/logo.png"],
@@ -80,6 +98,25 @@ export const metadata: Metadata = {
     { media: '(prefers-color-scheme: dark)', color: '#0d1117' },
   ],
   category: 'technology',
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Commit Habit",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "description": "Automate your GitHub contributions safely and ethically. Build consistent coding habits with daily commits using secure GitHub App authentication.",
+  "publisher": {
+    "@type": "Organization",
+    "name": "Commit Habit",
+    "logo": "https://commithabit.vercel.app/logo.png"
+  }
 };
 
 export default function RootLayout({
@@ -103,6 +140,20 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
       >
+        <Script
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-MWC3K30RK2"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-MWC3K30RK2');
+          `}
+        </Script>
+        <Script id="json-ld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <Providers>{children}</Providers>
       </body>
     </html>
