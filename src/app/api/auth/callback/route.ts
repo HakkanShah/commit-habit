@@ -149,6 +149,7 @@ export async function GET(request: NextRequest) {
                         name: user.name,
                         email: user.email,
                         avatarUrl: user.avatar_url,
+                        lastLoginAt: new Date(),
                     },
                 })
             } catch (dbError) {
@@ -170,6 +171,7 @@ export async function GET(request: NextRequest) {
                         name: user.name,
                         email: user.email,
                         avatarUrl: user.avatar_url,
+                        lastLoginAt: new Date(),
                         accounts: {
                             create: {
                                 provider: 'github',

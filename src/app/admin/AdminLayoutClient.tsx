@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Menu, X, LayoutDashboard, Users, MessageSquare, LogOut, ChevronRight, Mail } from 'lucide-react'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 export function AdminLayoutClient({
     children,
@@ -178,14 +179,18 @@ export function AdminLayoutClient({
                 {/* Main Content */}
                 <main className="flex-1 ml-64 min-h-screen">
                     <div className="max-w-5xl mx-auto p-6 lg:p-8">
-                        {children}
+                        <ErrorBoundary>
+                            {children}
+                        </ErrorBoundary>
                     </div>
                 </main>
             </div>
 
             {/* Mobile Content */}
             <main className="lg:hidden px-4 py-5">
-                {children}
+                <ErrorBoundary>
+                    {children}
+                </ErrorBoundary>
             </main>
         </div>
     )

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAdminUser } from '@/lib/admin-auth'
 import { AdminLayoutClient } from './AdminLayoutClient'
+import './admin-animations.css'
 
 export const dynamic = 'force-dynamic'
 

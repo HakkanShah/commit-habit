@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/admin-auth'
-import { queryAuditLogs, type AuditLogQuery } from '@/lib/audit'
+import { queryAuditLogs, type AuditLogQuery, type AuditActorType } from '@/lib/audit'
 import { createErrorResponse } from '@/lib/errors'
 
-// GET /api/admin/audit - Query audit logs
+// GET /api/admin/audit - Query audit logs with filters
 export async function GET(request: NextRequest) {
     try {
         // Require admin access
@@ -15,10 +15,19 @@ export async function GET(request: NextRequest) {
         const query: AuditLogQuery = {
             userId: searchParams.get('userId') ?? undefined,
             action: searchParams.get('action') ?? undefined,
+            actorType: (searchParams.get('actorType') as AuditActorType) ?? undefined,
+            targetUserId: searchParams.get('targetUserId') ?? undefined,
             entityType: searchParams.get('entityType') ?? undefined,
             entityId: searchParams.get('entityId') ?? undefined,
+            cursor: searchParams.get('cursor') ?? undefined,
             limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 50,
             offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!, 10) : 0,
+        }
+
+        // Parse actions array (comma-separated)
+        const actionsParam = searchParams.get('actions')
+        if (actionsParam) {
+            query.actions = actionsParam.split(',')
         }
 
         // Parse date filters
@@ -33,14 +42,14 @@ export async function GET(request: NextRequest) {
         }
 
         // Query audit logs
-        const { logs, total } = await queryAuditLogs(query)
+        const { logs, total, hasMore, nextCursor } = await queryAuditLogs(query)
 
         return NextResponse.json({
             logs,
             total,
             limit: query.limit,
-            offset: query.offset,
-            hasMore: (query.offset ?? 0) + logs.length < total
+            hasMore,
+            nextCursor
         })
     } catch (error) {
         const { body, status } = createErrorResponse(error)
