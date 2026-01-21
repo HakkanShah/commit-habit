@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Menu, X, LayoutDashboard, Users, MessageSquare, LogOut, ChevronRight, Mail } from 'lucide-react'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 export function AdminLayoutClient({
     children,
@@ -45,11 +46,11 @@ export function AdminLayoutClient({
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#0d1117] to-[#161b22] text-white">
             {/* Mobile Header */}
-            <header className="sticky top-0 z-40 lg:hidden">
+            <header className="sticky top-0 z-40 lg:hidden safe-area-top">
                 <div className="bg-[#0d1117]/95 backdrop-blur-xl border-b border-white/5">
-                    <div className="flex items-center justify-between px-4 h-14">
-                        <Link href="/" className="flex items-center gap-1.5">
-                            <span className="text-lg font-bold">
+                    <div className="flex items-center justify-between px-3 sm:px-4 h-12 sm:h-14">
+                        <Link href="/" className="flex items-center gap-1.5 touch-manipulation">
+                            <span className="text-base sm:text-lg font-bold">
                                 C<span className="text-[#39d353]">●</span>mmit
                                 <span className="text-[#39d353]">Habit</span>
                             </span>
@@ -57,7 +58,8 @@ export function AdminLayoutClient({
 
                         <button
                             onClick={() => setSidebarOpen(true)}
-                            className="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded-xl transition-colors"
+                            className="w-10 h-10 flex items-center justify-center hover:bg-white/5 active:bg-white/10 rounded-xl transition-colors touch-manipulation"
+                            aria-label="Open menu"
                         >
                             <Menu className="w-5 h-5" />
                         </button>
@@ -74,48 +76,49 @@ export function AdminLayoutClient({
             )}
 
             {/* Mobile Sidebar */}
-            <aside className={`fixed top-0 right-0 h-full w-72 bg-[#0d1117] border-l border-white/5 z-50 transform transition-transform duration-300 ease-out lg:hidden ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'
+            <aside className={`fixed top-0 right-0 h-full w-[280px] sm:w-72 bg-[#0d1117] border-l border-white/5 z-50 transform transition-transform duration-300 ease-out lg:hidden safe-area-right ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'
                 }`}>
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col h-full safe-area-top">
                     {/* Sidebar Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-white/5">
-                        <div>
-                            <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full">
+                    <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/5">
+                        <div className="min-w-0">
+                            <span className="px-2 py-0.5 text-[9px] sm:text-[10px] font-bold bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full">
                                 ADMIN
                             </span>
-                            <p className="text-xs text-gray-500 mt-1 truncate">{adminName}</p>
+                            <p className="text-[11px] sm:text-xs text-gray-500 mt-1 truncate max-w-[140px] sm:max-w-[160px]">{adminName}</p>
                         </div>
                         <button
                             onClick={() => setSidebarOpen(false)}
-                            className="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded-xl transition-colors"
+                            className="w-10 h-10 flex items-center justify-center hover:bg-white/5 active:bg-white/10 rounded-xl transition-colors touch-manipulation"
+                            aria-label="Close menu"
                         >
                             <X className="w-5 h-5" />
                         </button>
                     </div>
 
                     {/* Nav Items */}
-                    <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+                    <nav className="flex-1 p-2 sm:p-3 space-y-1 overflow-y-auto">
                         {navItems.map(({ href, icon: Icon, label }) => (
                             <Link
                                 key={href}
                                 href={href}
-                                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive(href)
+                                className={`flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl transition-all touch-manipulation active:scale-[0.98] ${isActive(href)
                                     ? 'bg-[#39d353]/10 text-[#39d353]'
-                                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                    : 'text-gray-400 hover:bg-white/5 active:bg-white/10 hover:text-white'
                                     }`}
                             >
                                 <Icon className="w-5 h-5" />
-                                <span className="font-medium">{label}</span>
+                                <span className="font-medium text-sm sm:text-base">{label}</span>
                                 {isActive(href) && <ChevronRight className="w-4 h-4 ml-auto" />}
                             </Link>
                         ))}
                     </nav>
 
                     {/* Exit Button */}
-                    <div className="p-3 border-t border-white/5">
+                    <div className="p-2 sm:p-3 border-t border-white/5 safe-area-bottom">
                         <Link
                             href="/dashboard"
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:bg-white/5 hover:text-gray-300 transition-colors"
+                            className="flex items-center gap-3 px-3 sm:px-4 py-3 rounded-xl text-gray-500 hover:bg-white/5 active:bg-white/10 hover:text-gray-300 transition-colors touch-manipulation"
                         >
                             <LogOut className="w-5 h-5" />
                             <span className="font-medium">Exit Admin</span>
@@ -178,14 +181,18 @@ export function AdminLayoutClient({
                 {/* Main Content */}
                 <main className="flex-1 ml-64 min-h-screen">
                     <div className="max-w-5xl mx-auto p-6 lg:p-8">
-                        {children}
+                        <ErrorBoundary>
+                            {children}
+                        </ErrorBoundary>
                     </div>
                 </main>
             </div>
 
             {/* Mobile Content */}
-            <main className="lg:hidden px-4 py-5">
-                {children}
+            <main className="lg:hidden px-3 sm:px-4 py-4 sm:py-5 safe-area-bottom">
+                <ErrorBoundary>
+                    {children}
+                </ErrorBoundary>
             </main>
         </div>
     )

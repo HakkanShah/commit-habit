@@ -12,16 +12,19 @@ export async function GET(request: NextRequest) {
         // Parse query parameters
         const { searchParams } = new URL(request.url)
         const search = searchParams.get('search') ?? undefined
+        const includeDeleted = searchParams.get('includeDeleted') === 'true'
         const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : 50
         const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!, 10) : 0
 
-        // Build where clause for search
-        const where = search ? {
+        // Build where clause for search and soft-delete filter
+        const baseWhere = includeDeleted ? {} : { deletedAt: null }
+        const searchWhere = search ? {
             OR: [
                 { name: { contains: search, mode: 'insensitive' as const } },
                 { email: { contains: search, mode: 'insensitive' as const } }
             ]
         } : {}
+        const where = { ...baseWhere, ...searchWhere }
 
         // Fetch users with related data
         const [users, total] = await Promise.all([

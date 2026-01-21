@@ -26,6 +26,8 @@ describe('Admin Auth Module', () => {
                 name: null,
                 avatarUrl: null,
                 lastLoginAt: null,
+                deletedAt: null,
+                deletedBy: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             })
@@ -47,6 +49,8 @@ describe('Admin Auth Module', () => {
                 name: null,
                 avatarUrl: null,
                 lastLoginAt: null,
+                deletedAt: null,
+                deletedBy: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             })
@@ -64,6 +68,8 @@ describe('Admin Auth Module', () => {
                 name: null,
                 avatarUrl: null,
                 lastLoginAt: null,
+                deletedAt: null,
+                deletedBy: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             })
@@ -98,6 +104,8 @@ describe('Admin Auth Module', () => {
                 name: 'Test User',
                 avatarUrl: null,
                 lastLoginAt: null,
+                deletedAt: null,
+                deletedBy: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             })
@@ -120,6 +128,8 @@ describe('Admin Auth Module', () => {
                 name: 'Admin User',
                 avatarUrl: null,
                 lastLoginAt: null,
+                deletedAt: null,
+                deletedBy: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             })
@@ -155,6 +165,8 @@ describe('Admin Auth Module', () => {
                 name: 'Test User',
                 avatarUrl: null,
                 lastLoginAt: null,
+                deletedAt: null,
+                deletedBy: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             })
@@ -179,6 +191,8 @@ describe('Admin Auth Module', () => {
                 name: 'Admin User',
                 avatarUrl: null,
                 lastLoginAt: null,
+                deletedAt: null,
+                deletedBy: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             })

@@ -1,12 +1,32 @@
 'use client'
 
-// Reusable skeleton components for admin panel loading states
+// Reusable skeleton components for admin panel loading states with enhanced animations
 
-export function Skeleton({ className = '' }: { className?: string }) {
+interface SkeletonProps {
+    className?: string
+    shimmer?: boolean
+}
+
+export function Skeleton({ className = '', shimmer = true }: SkeletonProps) {
     return (
         <div
-            className={`animate-pulse bg-white/5 rounded ${className}`}
+            className={`
+                rounded bg-white/5
+                ${shimmer ? 'skeleton-shimmer' : 'animate-pulse'}
+                ${className}
+            `}
         />
+    )
+}
+
+// Inline loading dots component
+export function LoadingDots({ className = '' }: { className?: string }) {
+    return (
+        <div className={`flex items-center gap-1 ${className}`}>
+            <div className="w-1.5 h-1.5 bg-current rounded-full loading-dot" />
+            <div className="w-1.5 h-1.5 bg-current rounded-full loading-dot" />
+            <div className="w-1.5 h-1.5 bg-current rounded-full loading-dot" />
+        </div>
     )
 }
 
@@ -15,7 +35,7 @@ export function DashboardSkeleton() {
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between fade-in">
                 <div className="flex items-center gap-2">
                     <Skeleton className="w-5 h-5 rounded" />
                     <Skeleton className="w-24 h-6" />
@@ -23,10 +43,10 @@ export function DashboardSkeleton() {
                 <Skeleton className="w-9 h-9 rounded-full sm:w-20 sm:rounded-lg" />
             </div>
 
-            {/* Stats Grid - 2x2 */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Stats Grid - 2x2 with stagger */}
+            <div className="grid grid-cols-2 gap-3 stagger-children">
                 {[...Array(4)].map((_, i) => (
-                    <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+                    <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-4 premium-card">
                         <Skeleton className="w-10 h-10 rounded-lg mb-2" />
                         <Skeleton className="w-16 h-8 mb-1" />
                         <Skeleton className="w-12 h-3" />
@@ -41,12 +61,12 @@ export function DashboardSkeleton() {
             </div>
 
             {/* Activity List */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl overflow-hidden">
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl overflow-hidden scale-in">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
                     <Skeleton className="w-28 h-4" />
                     <Skeleton className="w-6 h-5 rounded-full" />
                 </div>
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-white/5 stagger-children">
                     {[...Array(5)].map((_, i) => (
                         <div key={i} className="flex items-center gap-3 px-4 py-2.5">
                             <Skeleton className="w-7 h-7 rounded-full shrink-0" />
@@ -68,7 +88,7 @@ export function UsersSkeleton() {
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between fade-in">
                 <div className="flex items-center gap-2">
                     <Skeleton className="w-5 h-5 rounded" />
                     <div>
@@ -82,10 +102,10 @@ export function UsersSkeleton() {
             {/* Search */}
             <Skeleton className="w-full h-11 rounded-xl" />
 
-            {/* User Cards */}
-            <div className="space-y-3">
+            {/* User Cards with stagger */}
+            <div className="space-y-3 stagger-children">
                 {[...Array(4)].map((_, i) => (
-                    <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+                    <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-4 premium-card">
                         <div className="flex items-start gap-3">
                             <Skeleton className="w-10 h-10 rounded-full shrink-0" />
                             <div className="flex-1 min-w-0">
@@ -114,7 +134,7 @@ export function FeedbackSkeleton() {
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between fade-in">
                 <div className="flex items-center gap-2">
                     <Skeleton className="w-5 h-5 rounded" />
                     <div>
@@ -132,10 +152,10 @@ export function FeedbackSkeleton() {
                 ))}
             </div>
 
-            {/* Testimonial Cards */}
-            <div className="space-y-4">
+            {/* Testimonial Cards with stagger */}
+            <div className="space-y-4 stagger-children">
                 {[...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+                    <div key={i} className="bg-white/[0.02] border border-white/5 rounded-xl p-4 premium-card">
                         {/* User info */}
                         <div className="flex items-center gap-3 mb-3">
                             <Skeleton className="w-10 h-10 rounded-full" />
@@ -170,7 +190,7 @@ export function EmailSkeleton() {
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between fade-in">
                 <div className="flex items-center gap-3">
                     <Skeleton className="w-9 h-9 rounded-lg" />
                     <div>
@@ -200,8 +220,8 @@ export function EmailSkeleton() {
                         </div>
                     </div>
 
-                    {/* User List */}
-                    <div className="flex-1 p-2 space-y-1">
+                    {/* User List with stagger */}
+                    <div className="flex-1 p-2 space-y-1 stagger-children">
                         {[...Array(6)].map((_, i) => (
                             <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
                                 <Skeleton className="w-5 h-5 rounded" />
@@ -217,7 +237,7 @@ export function EmailSkeleton() {
 
                 {/* Right: Compose Area */}
                 <div className="lg:col-span-8 bg-[#161b22] border border-white/5 rounded-2xl flex flex-col overflow-hidden hidden lg:flex">
-                    <div className="flex-1 p-6 space-y-4">
+                    <div className="flex-1 p-6 space-y-4 scale-in">
                         {/* Subject */}
                         <Skeleton className="w-full h-10 rounded-lg" />
 
@@ -239,5 +259,122 @@ export function EmailSkeleton() {
                 </div>
             </div>
         </div>
+    )
+}
+
+// User Action Panel skeleton
+export function UserPanelSkeleton() {
+    return (
+        <div className="p-4 space-y-4">
+            {/* Profile card */}
+            <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02]">
+                <div className="flex items-start gap-4">
+                    <Skeleton className="w-16 h-16 rounded-full" />
+                    <div className="flex-1">
+                        <Skeleton className="w-32 h-6 mb-2" />
+                        <Skeleton className="w-48 h-4 mb-2" />
+                        <Skeleton className="w-28 h-4" />
+                    </div>
+                </div>
+
+                {/* Stats grid */}
+                <div className="grid grid-cols-4 gap-2 mt-4">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white/[0.03] rounded-lg p-2 text-center">
+                            <Skeleton className="w-8 h-6 mx-auto mb-1" />
+                            <Skeleton className="w-10 h-2 mx-auto" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Repos section */}
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl">
+                <div className="p-3 flex items-center gap-2">
+                    <Skeleton className="w-4 h-4 rounded" />
+                    <Skeleton className="w-24 h-4" />
+                </div>
+            </div>
+
+            {/* Commits section */}
+            <div className="bg-white/[0.02] border border-white/5 rounded-xl">
+                <div className="p-3 flex items-center gap-2">
+                    <Skeleton className="w-4 h-4 rounded" />
+                    <Skeleton className="w-28 h-4" />
+                </div>
+            </div>
+
+            {/* Danger zone */}
+            <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
+                <Skeleton className="w-20 h-4 mb-3" />
+                <Skeleton className="w-full h-10 rounded-lg" />
+            </div>
+        </div>
+    )
+}
+
+// Empty state component
+export function EmptyState({
+    icon: Icon,
+    title,
+    description,
+    action
+}: {
+    icon: React.ElementType
+    title: string
+    description: string
+    action?: {
+        label: string
+        onClick: () => void
+    }
+}) {
+    return (
+        <div className="flex flex-col items-center justify-center py-12 px-4 text-center fade-in">
+            <div className="w-16 h-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-4">
+                <Icon className="w-8 h-8 text-gray-500" />
+            </div>
+            <h3 className="text-lg font-medium text-white mb-1">{title}</h3>
+            <p className="text-sm text-gray-500 max-w-sm mb-4">{description}</p>
+            {action && (
+                <button
+                    onClick={action.onClick}
+                    className="px-4 py-2 bg-[#238636] hover:bg-[#2ea043] text-white rounded-lg text-sm font-medium transition-colors press-effect"
+                >
+                    {action.label}
+                </button>
+            )}
+        </div>
+    )
+}
+
+// Status indicator with animation
+export function StatusIndicator({
+    status,
+    pulse = false,
+    size = 'sm'
+}: {
+    status: 'active' | 'inactive' | 'warning' | 'error'
+    pulse?: boolean
+    size?: 'sm' | 'md'
+}) {
+    const colors = {
+        active: 'bg-green-500',
+        inactive: 'bg-gray-500',
+        warning: 'bg-yellow-500',
+        error: 'bg-red-500'
+    }
+
+    const sizes = {
+        sm: 'w-2 h-2',
+        md: 'w-3 h-3'
+    }
+
+    return (
+        <span
+            className={`
+                ${sizes[size]} rounded-full ${colors[status]}
+                ${pulse && status === 'active' ? 'status-pulse' : ''}
+            `}
+        />
     )
 }

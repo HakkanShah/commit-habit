@@ -14,6 +14,8 @@ model User {
   avatarUrl     String?
   role          String         @default("USER") // "USER" | "ADMIN"
   lastLoginAt   DateTime?
+  deletedAt     DateTime?      // Soft-delete: when the user was deleted
+  deletedBy     String?        // Admin userId who deleted this user
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   installations Installation[]
@@ -23,6 +25,7 @@ model User {
 
   @@index([createdAt])
   @@index([lastLoginAt])
+  @@index([deletedAt])
 }
 
 model Testimonial {
@@ -106,17 +109,20 @@ model VisitorLog {
 
 // User-level audit log for tracking all user actions (immutable, append-only)
 model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  action      String   // LOGIN, LOGOUT, REPO_ADDED, REPO_REMOVED, PAUSE, RESUME, etc.
-  entityType  String?  // Installation, Testimonial, etc.
-  entityId    String?  // ID of the affected entity
-  metadata    Json?    // Additional context (e.g., repoName, oldValue, newValue)
-  ipAddress   String?  // For security auditing
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action       String   // LOGIN, LOGOUT, REPO_ADDED, REPO_REMOVED, PAUSE, RESUME, ADMIN_DELETE_USER, etc.
+  actorType    String   @default("USER") // "USER" | "ADMIN" | "SYSTEM"
+  targetUserId String?  // For admin actions: the user affected by the action
+  entityType   String?  // Installation, Testimonial, etc.
+  entityId     String?  // ID of the affected entity
+  metadata     Json?    // Additional context (e.g., repoName, oldValue, newValue)
+  ipAddress    String?  // For security auditing
+  createdAt    DateTime @default(now())
 
   @@index([userId])
   @@index([action])
+  @@index([actorType])
   @@index([createdAt])
 }
