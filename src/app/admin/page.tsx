@@ -5,7 +5,9 @@ import useSWR from 'swr'
 import {
     Users, MessageSquare, GitCommit, Activity, TrendingUp, RefreshCw,
     AlertCircle, ArrowRight, Sparkles, Shield, Clock, ChevronRight,
-    GitBranch, Zap, Calendar, Eye, Mail
+    GitBranch, Zap, Calendar, Eye, Mail, LogIn, LogOut, UserPlus,
+    UserCheck, Check, X, Pencil, FolderPlus, Trash2, Pause, Play,
+    UserX, RotateCcw, FileText, Pin
 } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardSkeleton } from './components/skeletons'
@@ -39,26 +41,26 @@ const swrConfig = {
     dedupingInterval: 60000,
 }
 
-// Action info mapping
-const ACTION_INFO: Record<string, { text: string; icon: string; color: string }> = {
-    'LOGIN': { text: 'logged in', icon: '🔐', color: 'blue' },
-    'LOGOUT': { text: 'logged out', icon: '👋', color: 'gray' },
-    'SIGNUP': { text: 'joined', icon: '🎉', color: 'green' },
-    'USER_CREATED': { text: 'signed up', icon: '👤', color: 'green' },
-    'TESTIMONIAL_SUBMITTED': { text: 'submitted feedback', icon: '💬', color: 'purple' },
-    'TESTIMONIAL_APPROVED': { text: 'approved feedback', icon: '✅', color: 'green' },
-    'TESTIMONIAL_REJECTED': { text: 'rejected feedback', icon: '❌', color: 'red' },
-    'TESTIMONIAL_EDITED': { text: 'edited feedback', icon: '✏️', color: 'yellow' },
-    'REPO_ADDED': { text: 'added a repo', icon: '📁', color: 'blue' },
-    'REPO_REMOVED': { text: 'removed a repo', icon: '🗑️', color: 'red' },
-    'REPO_PAUSED': { text: 'paused automation', icon: '⏸️', color: 'yellow' },
-    'REPO_RESUMED': { text: 'resumed automation', icon: '▶️', color: 'green' },
-    'ADMIN_DELETE_USER': { text: 'deleted a user', icon: '🚫', color: 'red' },
-    'ADMIN_RESTORE_USER': { text: 'restored a user', icon: '♻️', color: 'green' },
-    'ADMIN_DELETE_REPO': { text: 'removed a repo', icon: '🗑️', color: 'red' },
-    'ADMIN_PAUSE_REPO': { text: 'paused a repo', icon: '⏸️', color: 'yellow' },
-    'ADMIN_RESUME_REPO': { text: 'resumed a repo', icon: '▶️', color: 'green' },
-    'ADMIN_COMMIT': { text: 'triggered a commit', icon: '📝', color: 'purple' },
+// Action info mapping with Lucide icons
+const ACTION_INFO: Record<string, { text: string; icon: React.ElementType; color: string }> = {
+    'LOGIN': { text: 'logged in', icon: LogIn, color: 'blue' },
+    'LOGOUT': { text: 'logged out', icon: LogOut, color: 'gray' },
+    'SIGNUP': { text: 'joined', icon: UserPlus, color: 'green' },
+    'USER_CREATED': { text: 'signed up', icon: UserCheck, color: 'green' },
+    'TESTIMONIAL_SUBMITTED': { text: 'submitted feedback', icon: MessageSquare, color: 'purple' },
+    'TESTIMONIAL_APPROVED': { text: 'approved feedback', icon: Check, color: 'green' },
+    'TESTIMONIAL_REJECTED': { text: 'rejected feedback', icon: X, color: 'red' },
+    'TESTIMONIAL_EDITED': { text: 'edited feedback', icon: Pencil, color: 'yellow' },
+    'REPO_ADDED': { text: 'added a repo', icon: FolderPlus, color: 'blue' },
+    'REPO_REMOVED': { text: 'removed a repo', icon: Trash2, color: 'red' },
+    'REPO_PAUSED': { text: 'paused automation', icon: Pause, color: 'yellow' },
+    'REPO_RESUMED': { text: 'resumed automation', icon: Play, color: 'green' },
+    'ADMIN_DELETE_USER': { text: 'deleted a user', icon: UserX, color: 'red' },
+    'ADMIN_RESTORE_USER': { text: 'restored a user', icon: RotateCcw, color: 'green' },
+    'ADMIN_DELETE_REPO': { text: 'removed a repo', icon: Trash2, color: 'red' },
+    'ADMIN_PAUSE_REPO': { text: 'paused a repo', icon: Pause, color: 'yellow' },
+    'ADMIN_RESUME_REPO': { text: 'resumed a repo', icon: Play, color: 'green' },
+    'ADMIN_COMMIT': { text: 'triggered a commit', icon: FileText, color: 'purple' },
 }
 
 export default function AdminDashboard() {
@@ -111,7 +113,7 @@ export default function AdminDashboard() {
     }
 
     const formatAction = (action: string) => {
-        return ACTION_INFO[action] || { text: action.replace(/_/g, ' ').toLowerCase(), icon: '📌', color: 'gray' }
+        return ACTION_INFO[action] || { text: action.replace(/_/g, ' ').toLowerCase(), icon: Pin, color: 'gray' }
     }
 
     const formatTimeAgo = (dateString: string) => {
@@ -151,22 +153,22 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#39d353]/20 to-[#39d353]/5 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-[#39d353]" />
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#39d353]/20 to-[#39d353]/5 flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-[#39d353]" />
                     </div>
                     <div>
-                        <h1 className="text-lg sm:text-xl font-bold">Dashboard</h1>
-                        <p className="text-xs text-gray-500">Welcome back, Admin</p>
+                        <h1 className="text-base sm:text-lg md:text-xl font-bold">Dashboard</h1>
+                        <p className="text-[10px] sm:text-xs text-gray-500">Welcome back, Admin</p>
                     </div>
                 </div>
                 <button
                     onClick={fetchData}
                     disabled={refreshing}
-                    className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all disabled:opacity-50 press-effect"
+                    className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/10 rounded-xl transition-all disabled:opacity-50 press-effect touch-manipulation"
                     title="Refresh"
                 >
                     <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -174,7 +176,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Stats Grid - Desktop: 4 cols, Mobile: 2 cols */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 lg:gap-4">
                 <StatCard
                     icon={Users}
                     label="Total Users"
@@ -206,54 +208,74 @@ export default function AdminDashboard() {
                 />
             </div>
 
+            {/* Mobile Today's Summary - Shows above activity on mobile */}
+            <div className="lg:hidden bg-gradient-to-br from-[#39d353]/10 to-transparent border border-[#39d353]/20 rounded-xl p-3 sm:p-4">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xs sm:text-sm font-semibold text-[#39d353] flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        Today's Summary
+                    </h3>
+                    <div className="flex items-center gap-4 sm:gap-6">
+                        <div className="text-center">
+                            <p className="text-lg sm:text-xl font-bold text-white">{stats?.totalAutoCommits ? Math.floor(stats.totalAutoCommits * 0.1) : 0}</p>
+                            <p className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wider">Commits</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-lg sm:text-xl font-bold text-white">{activity.length}</p>
+                            <p className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-wider">Actions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Main Content Grid */}
-            <div className="grid lg:grid-cols-3 gap-6">
+            <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Activity Feed - Takes 2 cols on desktop */}
-                <div className="lg:col-span-2 bg-white/[0.02] border border-white/5 rounded-2xl overflow-hidden">
+                <div className="lg:col-span-2 bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl overflow-hidden">
                     {/* Tab Headers */}
                     <div className="flex items-center border-b border-white/5">
                         <button
                             onClick={() => setActiveTab('users')}
-                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium transition-all ${activeTab === 'users'
+                            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-all touch-manipulation ${activeTab === 'users'
                                 ? 'text-[#39d353] bg-[#39d353]/5 border-b-2 border-[#39d353] -mb-px'
-                                : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]'
+                                : 'text-gray-500 hover:text-gray-300 active:bg-white/5'
                                 }`}
                         >
-                            <Activity className="w-4 h-4" />
-                            <span>User Activity</span>
+                            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span className="hidden xs:inline">User</span> <span>Activity</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('admins')}
-                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium transition-all ${activeTab === 'admins'
+                            className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-all touch-manipulation ${activeTab === 'admins'
                                 ? 'text-orange-400 bg-orange-400/5 border-b-2 border-orange-400 -mb-px'
-                                : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]'
+                                : 'text-gray-500 hover:text-gray-300 active:bg-white/5'
                                 }`}
                         >
-                            <Shield className="w-4 h-4" />
-                            <span>Admin Actions</span>
+                            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span className="hidden xs:inline">Admin</span> <span>Actions</span>
                         </button>
                     </div>
 
                     {/* Activity Content */}
-                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                    <div className="max-h-[320px] sm:max-h-[400px] overflow-y-auto custom-scrollbar">
                         {activityLoading ? (
-                            <div className="py-16 flex flex-col items-center justify-center gap-3">
-                                <RefreshCw className="w-6 h-6 text-gray-600 animate-spin" />
-                                <p className="text-sm text-gray-500">Loading activity...</p>
+                            <div className="py-10 sm:py-16 flex flex-col items-center justify-center gap-2 sm:gap-3">
+                                <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 animate-spin" />
+                                <p className="text-xs sm:text-sm text-gray-500">Loading activity...</p>
                             </div>
                         ) : activityError ? (
-                            <div className="py-16 text-center">
-                                <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
-                                <p className="text-red-400 font-medium">Failed to load activity</p>
-                                <p className="text-xs text-gray-500 mt-1">Try refreshing the page</p>
+                            <div className="py-10 sm:py-16 text-center px-4">
+                                <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-red-400 mx-auto mb-2 sm:mb-3" />
+                                <p className="text-red-400 font-medium text-sm">Failed to load activity</p>
+                                <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Try refreshing the page</p>
                             </div>
                         ) : activity.length === 0 ? (
-                            <div className="py-16 text-center">
-                                <div className="w-16 h-16 rounded-full bg-white/[0.03] flex items-center justify-center mx-auto mb-4">
-                                    <TrendingUp className="w-8 h-8 text-gray-600" />
+                            <div className="py-10 sm:py-16 text-center px-4">
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/[0.03] flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                                    <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-gray-600" />
                                 </div>
-                                <p className="text-gray-400 font-medium">No activity yet</p>
-                                <p className="text-xs text-gray-600 mt-1">
+                                <p className="text-gray-400 font-medium text-sm">No activity yet</p>
+                                <p className="text-[10px] sm:text-xs text-gray-600 mt-1">
                                     {activeTab === 'users' ? 'User actions will appear here' : 'Admin actions will appear here'}
                                 </p>
                             </div>
@@ -266,41 +288,59 @@ export default function AdminDashboard() {
                                     return (
                                         <div
                                             key={a.id}
-                                            className={`flex items-center gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors ${index === 0 ? 'bg-white/[0.01]' : ''
+                                            className={`flex items-start sm:items-center gap-2.5 sm:gap-4 px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-white/[0.02] active:bg-white/[0.04] transition-colors ${index === 0 ? 'bg-white/[0.01]' : ''
                                                 }`}
                                             style={{ animationDelay: `${index * 50}ms` }}
                                         >
                                             {/* Avatar or Icon */}
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-base ${isAdminAction
-                                                ? 'bg-gradient-to-br from-orange-500/20 to-red-500/20 ring-2 ring-orange-500/30'
-                                                : 'bg-white/5'
-                                                }`}>
-                                                {actionInfo.icon}
-                                            </div>
+                                            {(() => {
+                                                const IconComponent = actionInfo.icon
+                                                const iconColorClasses: Record<string, string> = {
+                                                    blue: 'text-blue-400',
+                                                    green: 'text-green-400',
+                                                    yellow: 'text-yellow-400',
+                                                    red: 'text-red-400',
+                                                    purple: 'text-purple-400',
+                                                    gray: 'text-gray-400',
+                                                }
+                                                return (
+                                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${isAdminAction
+                                                        ? 'bg-gradient-to-br from-orange-500/20 to-red-500/20 ring-2 ring-orange-500/30'
+                                                        : 'bg-white/5'
+                                                        }`}>
+                                                        <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 ${iconColorClasses[actionInfo.color] || 'text-gray-400'}`} />
+                                                    </div>
+                                                )
+                                            })()}
 
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm">
+                                                <p className="text-xs sm:text-sm leading-snug">
                                                     <span className="font-medium text-white">
                                                         {a.user?.name || 'Unknown'}
                                                     </span>
                                                     <span className="text-gray-500"> {actionInfo.text}</span>
                                                 </p>
-                                                <div className="flex items-center gap-2 mt-0.5">
+                                                <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 flex-wrap">
                                                     {a.metadata && 'repoFullName' in a.metadata && (
-                                                        <span className="inline-flex items-center gap-1 text-xs text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">
-                                                            <GitBranch className="w-3 h-3" />
-                                                            {String(a.metadata.repoFullName).split('/')[1] || String(a.metadata.repoFullName)}
+                                                        <span className="inline-flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-gray-600 bg-white/5 px-1.5 sm:px-2 py-0.5 rounded-full">
+                                                            <GitBranch className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                                            <span className="max-w-[80px] sm:max-w-none truncate">{String(a.metadata.repoFullName).split('/')[1] || String(a.metadata.repoFullName)}</span>
                                                         </span>
                                                     )}
                                                     {a.metadata && 'userName' in a.metadata && (
-                                                        <span className="text-xs text-gray-600">
+                                                        <span className="text-[10px] sm:text-xs text-gray-600 truncate max-w-[100px] sm:max-w-none">
                                                             → {String(a.metadata.userName)}
                                                         </span>
                                                     )}
+                                                    {/* Mobile time - inline with metadata */}
+                                                    <span className="sm:hidden text-[10px] text-gray-600 ml-auto">
+                                                        {formatTimeAgo(a.createdAt)}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2 shrink-0">
+                                            {/* Desktop time badge */}
+                                            <div className="hidden sm:flex items-center gap-2 shrink-0">
                                                 <span className="text-[11px] text-gray-600 bg-white/5 px-2.5 py-1 rounded-full">
                                                     {formatTimeAgo(a.createdAt)}
                                                 </span>
@@ -377,33 +417,33 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Mobile Quick Actions */}
-            <div className="lg:hidden grid grid-cols-3 gap-3">
+            {/* Mobile Quick Actions - Improved touch targets */}
+            <div className="lg:hidden grid grid-cols-3 gap-2 sm:gap-3">
                 <Link
                     href="/admin/users"
-                    className="flex flex-col items-center gap-2 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 active:scale-95 transition-transform"
+                    className="flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-3 sm:p-4 min-h-[70px] sm:min-h-[80px] bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 active:scale-95 active:bg-blue-500/20 transition-all touch-manipulation"
                 >
-                    <Users className="w-5 h-5" />
-                    <span className="text-xs font-medium">Users</span>
+                    <Users className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <span className="text-[10px] sm:text-xs font-medium">Users</span>
                 </Link>
                 <Link
                     href="/admin/feedback"
-                    className="relative flex flex-col items-center gap-2 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-400 active:scale-95 transition-transform"
+                    className="relative flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-3 sm:p-4 min-h-[70px] sm:min-h-[80px] bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-400 active:scale-95 active:bg-yellow-500/20 transition-all touch-manipulation"
                 >
-                    <MessageSquare className="w-5 h-5" />
-                    <span className="text-xs font-medium">Feedback</span>
+                    <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <span className="text-[10px] sm:text-xs font-medium">Feedback</span>
                     {(stats?.pendingTestimonials ?? 0) > 0 && (
-                        <span className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-yellow-500 text-black text-[10px] font-bold rounded-full">
+                        <span className="absolute -top-1.5 -right-1.5 sm:-top-1 sm:-right-1 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] flex items-center justify-center bg-yellow-500 text-black text-[9px] sm:text-[10px] font-bold rounded-full px-1">
                             {stats?.pendingTestimonials}
                         </span>
                     )}
                 </Link>
                 <Link
                     href="/admin/emails"
-                    className="flex flex-col items-center gap-2 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400 active:scale-95 transition-transform"
+                    className="flex flex-col items-center justify-center gap-1.5 sm:gap-2 p-3 sm:p-4 min-h-[70px] sm:min-h-[80px] bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-400 active:scale-95 active:bg-purple-500/20 transition-all touch-manipulation"
                 >
-                    <Mail className="w-5 h-5" />
-                    <span className="text-xs font-medium">Emails</span>
+                    <Mail className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <span className="text-[10px] sm:text-xs font-medium">Emails</span>
                 </Link>
             </div>
         </div>
@@ -438,31 +478,31 @@ function StatCard({
     const colors = colorClasses[color] || colorClasses.blue
 
     const Card = (
-        <div className={`relative overflow-hidden bg-white/[0.02] border border-white/5 rounded-2xl p-4 lg:p-5 transition-all group ${href ? 'cursor-pointer hover:bg-white/[0.04] hover:border-white/10 active:scale-[0.98]' : ''
+        <div className={`relative overflow-hidden bg-white/[0.02] border border-white/5 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-5 transition-all group touch-manipulation ${href ? 'cursor-pointer hover:bg-white/[0.04] hover:border-white/10 active:scale-[0.98] active:bg-white/[0.06]' : ''
             }`}>
             {/* Glow Effect */}
-            <div className={`absolute -top-10 -right-10 w-24 h-24 ${colors.glow} opacity-10 blur-3xl group-hover:opacity-20 transition-opacity`} />
+            <div className={`absolute -top-10 -right-10 w-20 h-20 sm:w-24 sm:h-24 ${colors.glow} opacity-10 blur-3xl group-hover:opacity-20 transition-opacity`} />
 
             {/* Alert Pulse */}
             {alert && (
-                <span className="absolute top-3 right-3 w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                <span className="absolute top-2 right-2 sm:top-3 sm:right-3 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-yellow-500 rounded-full animate-pulse" />
             )}
 
-            <div className="flex items-start justify-between">
-                <div>
-                    <div className="flex items-center gap-2 mb-2">
-                        <p className="text-xs text-gray-500">{label}</p>
-                        {href && <ChevronRight className="w-3 h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" />}
+            <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">{label}</p>
+                        {href && <ChevronRight className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
                     </div>
-                    <div className="flex items-baseline gap-2">
-                        <p className="text-2xl lg:text-3xl font-bold tabular-nums">{value.toLocaleString()}</p>
+                    <div className="flex items-baseline gap-1.5 sm:gap-2">
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-bold tabular-nums">{value.toLocaleString()}</p>
                         {growth && (
-                            <span className="text-xs text-green-400 font-medium">{growth}</span>
+                            <span className="text-[10px] sm:text-xs text-green-400 font-medium">{growth}</span>
                         )}
                     </div>
                 </div>
-                <div className={`p-3 rounded-xl bg-gradient-to-br ${colors.bg}`}>
-                    <Icon className={`w-5 h-5 ${colors.icon}`} />
+                <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br ${colors.bg} shrink-0`}>
+                    <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${colors.icon}`} />
                 </div>
             </div>
         </div>
