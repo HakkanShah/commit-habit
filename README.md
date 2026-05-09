@@ -1,4 +1,4 @@
-<div align="center">
+<div align="center"> 
 
 <img src="public/banner.png" alt="Commit Habit" width="600" />
 
