@@ -432,33 +432,44 @@ Commit Habit implements enterprise-grade security practices:
 
 ### Configure Cron Job
 
-`vercel.json` runs the automation **hourly**:
+The automation endpoint is `GET /api/cron/daily`, protected by
+`Authorization: Bearer $CRON_SECRET`.
+
+**Primary scheduler — cron-job.org (hourly).** This is what actually drives the
+automation in production:
+
+| Setting | Value |
+|---------|-------|
+| URL | `https://your-app.vercel.app/api/cron/daily` |
+| Schedule | every hour |
+| Header | `Authorization: Bearer <your CRON_SECRET>` |
+
+**Vercel cron — daily backup.** `vercel.json` keeps a once-a-day run as a safety
+net in case the external scheduler is down:
 
 ```json
 {
   "crons": [
-    {
-      "path": "/api/cron/daily",
-      "schedule": "7 * * * *"
-    }
+    { "path": "/api/cron/daily", "schedule": "0 6 * * *" }
   ]
 }
 ```
 
-Each repository still receives at most `MAX_COMMITS_PER_DAY` commits (see
-`src/lib/limits.ts`); the hourly schedule exists so that a run which cannot work
-through the whole queue inside its time budget is resumed within the hour
-instead of leaving those users without a commit for the day.
+> ⚠️ Do **not** set this to a sub-daily expression. Vercel **Hobby accounts only
+> permit daily cron jobs**, and a more frequent expression fails the deployment
+> outright with a configuration error — it does not silently downgrade. Frequency
+> belongs in cron-job.org, not here.
 
-> ⚠️ **Vercel Hobby plans only permit one cron invocation per day.** On Hobby the
-> schedule above is silently reduced to a daily run, which caps throughput at
-> roughly one run's worth of repositories. If you are on Hobby and have more
-> users than one run can process, either upgrade to Pro or point an external
-> scheduler (cron-job.org, GitHub Actions, Upstash QStash) at
-> `GET /api/cron/daily` every hour with the header
-> `Authorization: Bearer $CRON_SECRET`. The endpoint is idempotent: an
-> installation already handled today is skipped without using any GitHub API
-> quota, so extra invocations are cheap and safe.
+Running hourly is safe and cheap: each repository still receives at most
+`MAX_COMMITS_PER_DAY` commits (`src/lib/limits.ts`), and an installation already
+handled today is skipped without spending any GitHub API quota. The hourly
+cadence exists so that a run which cannot work through the whole queue inside
+its time budget is resumed within the hour, instead of leaving those users
+without a commit for the day.
+
+The per-run time budget defaults to 25s to stay inside cron-job.org's 30s
+timeout. If you move to a scheduler that waits longer, raise both
+`CRON_RUN_BUDGET_MS` and the `maxDuration` export in the route.
 
 ### Post-Deployment Checklist
 
@@ -503,8 +514,8 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://your-app.vercel.app/api/cro
 - `remaining: 0` — the whole queue was processed.
 - `remaining > 0` with `budgetExhausted: true` — the queue is bigger than one run
   can handle. The leftovers stay eligible and the next hourly run continues from
-  there, so the backlog clears itself, but if `remaining` never reaches 0 the
-  schedule is firing too rarely (see the Vercel Hobby note above).
+  there, so the backlog clears itself. If `remaining` never reaches 0, the
+  cron-job.org schedule is firing too rarely for the number of installations.
 
 The scheduler orders work by `nextEligibleAt`, oldest first, so a repository that
 missed a run is at the *front* of the next one. No repository can be starved

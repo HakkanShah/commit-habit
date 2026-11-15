@@ -56,10 +56,18 @@ export const dynamic = 'force-dynamic'
 
 const CRON_SECRET = process.env.CRON_SECRET
 
-/** Wall-clock budget for one run, slightly under `maxDuration`. */
-const RUN_BUDGET_MS = 50_000
+/**
+ * Wall-clock budget for one run.
+ *
+ * The scheduler driving this endpoint in production is cron-job.org, whose free
+ * tier drops the connection after 30 seconds. Overrunning that does not lose the
+ * work - the function keeps going - but the scheduler records a timeout and may
+ * retry, so the default stays inside its window. Raise `CRON_RUN_BUDGET_MS` if
+ * you move to a scheduler that waits longer (and raise `maxDuration` with it).
+ */
+const RUN_BUDGET_MS = Number(process.env.CRON_RUN_BUDGET_MS) || 25_000
 /** Stop starting new work with this much budget left, so in-flight work finishes. */
-const BUDGET_RESERVE_MS = 8_000
+const BUDGET_RESERVE_MS = 5_000
 /** Installations processed concurrently. */
 const CONCURRENCY = 6
 /**
