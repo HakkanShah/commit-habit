@@ -1,281 +1,173 @@
+/**
+ * Scheduled automation run.
+ *
+ * ## Why this file was rewritten
+ *
+ * The old version is the direct cause of "it commits for some users but not for
+ * most of them". It:
+ *
+ *   1. ran **once a day** (`0 6 * * *`) and gave itself a 25 second budget;
+ *   2. loaded **every** active installation with `findMany` and **no `orderBy`**,
+ *      so the order was whatever Postgres happened to return - in practice
+ *      stable across runs;
+ *   3. walked that list in batches of 5 and `break`-ed out as soon as it got
+ *      within 3 seconds of the budget.
+ *
+ * Each installation needs roughly 4 GitHub round trips plus a few writes, so a
+ * run got through a few dozen repositories at best. Everyone past that point was
+ * dropped - and because the order never changed and there was only one run per
+ * day, it was *the same* users dropped every single day. They never got a
+ * commit, and nothing in the logs said why.
+ *
+ * ## How it works now
+ *
+ * Installations carry a `nextEligibleAt` watermark. A run claims the ones whose
+ * watermark has passed, **oldest first**, and sets the watermark forward as each
+ * one is handled. So:
+ *
+ *   - a run that cannot finish the queue leaves the rest eligible, and the next
+ *     run starts exactly where this one stopped - no starvation;
+ *   - the schedule is hourly, so leftovers are picked up within the hour instead
+ *     of waiting a day;
+ *   - an installation already handled today is skipped without a single API call;
+ *   - a transient failure backs off and is retried later the same day instead of
+ *     costing the user their streak.
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
-    getInstallationOctokit,
-    hasUserCommitsToday,
-    getReadmeContent,
-    toggleReadmeWhitespace,
-    commitReadmeUpdate
-} from '@/lib/github'
-import {
-    AppError,
-    GitHubError,
-    DatabaseError,
-    ConfigurationError,
-    toAppError,
-    logError,
-    createErrorResponse,
-} from '@/lib/errors'
+    runCommitForInstallation,
+    installationForCommitSelect,
+    type CommitOutcome,
+    type InstallationForCommit,
+} from '@/lib/commit-service'
+import { ConfigurationError, DatabaseError, logError, createErrorResponse } from '@/lib/errors'
+
+// Allow the platform to give us real time to work with. The old 25s ceiling was
+// a guess copied from a free cron service; on Vercel this is what actually
+// governs the budget.
+export const maxDuration = 60
+export const dynamic = 'force-dynamic'
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
 const CRON_SECRET = process.env.CRON_SECRET
-const MAX_COMMITS_PER_DAY = 4
-const CRON_TIMEOUT_MS = 25000 // 25 seconds (cron-job.org has 30s limit)
-const MAX_CONCURRENT_INSTALLATIONS = 5 // Process up to 5 installations in parallel
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface ProcessingResult {
-    repo: string
-    status: 'success' | 'skipped' | 'error'
-    message: string
-    errorCode?: string
-    retryable?: boolean
-}
-
-type ActivityAction =
-    | 'commit_created'
-    | 'skipped_daily_limit'
-    | 'skipped_has_commits'
-    | 'skipped_no_readme'
-    | 'error_permission'
-    | 'error_not_found'
-    | 'error_rate_limited'
-    | 'error_conflict'
-    | 'error_network'
-    | 'error_unknown'
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
 
 /**
- * Map error to activity action type
+ * Wall-clock budget for one run.
+ *
+ * The scheduler driving this endpoint in production is cron-job.org, whose free
+ * tier drops the connection after 30 seconds. Overrunning that does not lose the
+ * work - the function keeps going - but the scheduler records a timeout and may
+ * retry, so the default stays inside its window. Raise `CRON_RUN_BUDGET_MS` if
+ * you move to a scheduler that waits longer (and raise `maxDuration` with it).
  */
-function getErrorAction(error: unknown): ActivityAction {
-    if (error instanceof GitHubError) {
-        switch (error.code) {
-            case 'GITHUB_003': return 'error_permission'
-            case 'GITHUB_002': return 'error_not_found'
-            case 'GITHUB_001': return 'error_rate_limited'
-            case 'GITHUB_007': return 'error_conflict'
-            case 'GITHUB_005':
-            case 'GITHUB_006': return 'error_network'
-            default: return 'error_unknown'
-        }
+const RUN_BUDGET_MS = Number(process.env.CRON_RUN_BUDGET_MS) || 25_000
+/** Stop starting new work with this much budget left, so in-flight work finishes. */
+const BUDGET_RESERVE_MS = 5_000
+/** Installations processed concurrently. */
+const CONCURRENCY = 6
+/**
+ * Upper bound on rows claimed per run. Keeps memory and the GitHub request rate
+ * predictable; whatever is left over is picked up by the next hourly run.
+ */
+const MAX_PER_RUN = 300
+/**
+ * How long a claimed installation stays reserved. Long enough to cover
+ * processing, short enough that a run which dies mid-flight releases its rows
+ * again quickly.
+ */
+const CLAIM_LEASE_MS = 5 * 60 * 1000
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function isAuthorized(request: NextRequest): boolean {
+    const header = request.headers.get('authorization')
+    if (!header) return false
+
+    const provided = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : header
+    if (!CRON_SECRET || provided.length !== CRON_SECRET.length) return false
+
+    // Constant-time comparison: this endpoint is the one thing standing between
+    // the open internet and writing to every connected repository.
+    let mismatch = 0
+    for (let i = 0; i < CRON_SECRET.length; i++) {
+        mismatch |= provided.charCodeAt(i) ^ CRON_SECRET.charCodeAt(i)
     }
-    return 'error_unknown'
+    return mismatch === 0
 }
 
 /**
- * Create a promise that rejects after a timeout
+ * Read the installations due for a run. Reserving them is a separate, atomic
+ * step (`claim`) taken immediately before each one is processed.
+ *
+ * `nextEligibleAt: null` covers rows that have never run (including every row
+ * that existed before this column did), and they sort first so new users get
+ * their first commit on the very next run.
  */
-function createTimeout(ms: number): Promise<never> {
-    return new Promise((_, reject) => {
-        setTimeout(() => {
-            reject(new Error(`Cron job timed out after ${ms}ms`))
-        }, ms)
+async function fetchDueInstallations(now: Date, limit: number): Promise<InstallationForCommit[]> {
+    const rows = await prisma.installation.findMany({
+        where: {
+            active: true,
+            // Soft-deleted users must not keep receiving commits.
+            user: { deletedAt: null },
+            OR: [
+                { nextEligibleAt: null },
+                { nextEligibleAt: { lte: now } },
+            ],
+        },
+        select: installationForCommitSelect,
+        orderBy: [
+            { nextEligibleAt: { sort: 'asc', nulls: 'first' } },
+            { createdAt: 'asc' },
+        ],
+        take: limit,
     })
+
+    return rows as unknown as InstallationForCommit[]
 }
 
 /**
- * Process a single installation
+ * Reserve one installation for this run.
+ *
+ * Schedulers overlap in practice - a slow run is still going when the next one
+ * fires, or the platform retries a timed-out invocation. Without a reservation
+ * both runs would process the same row and the user would get two commits.
+ * Moving `nextEligibleAt` forward under a `WHERE` that still requires the row to
+ * be due makes the claim atomic: exactly one run gets `count === 1`.
+ *
+ * The engine overwrites `nextEligibleAt` with its own value when it finishes, so
+ * the lease only matters while work is in flight.
  */
-async function processInstallation(
-    installation: {
-        id: string
-        installationId: number
-        repoFullName: string
-        commitsToday: number
-        lastRunAt: Date | null
-        user: {
-            name: string | null
-            accounts: { provider: string; providerAccountId: string; providerUsername: string | null }[]
-        }
-    },
-    today: Date
-): Promise<ProcessingResult> {
-    const [owner, repo] = installation.repoFullName.split('/')
-
+async function claim(installationId: string, now: Date): Promise<boolean> {
     try {
-        // Reset count if last run was before today
-        if (installation.lastRunAt && installation.lastRunAt < today) {
-            await prisma.installation.update({
-                where: { id: installation.id },
-                data: { commitsToday: 0 },
-            })
-            installation.commitsToday = 0
-        }
-
-        // Check daily limit
-        if (installation.commitsToday >= MAX_COMMITS_PER_DAY) {
-            await prisma.activityLog.create({
-                data: {
-                    installationId: installation.id,
-                    action: 'skipped_daily_limit',
-                    message: `Daily limit of ${MAX_COMMITS_PER_DAY} commits reached`,
-                },
-            })
-
-            return {
-                repo: installation.repoFullName,
-                status: 'skipped',
-                message: 'Daily limit reached',
-            }
-        }
-
-        // Get Octokit instance
-        const octokit = await getInstallationOctokit(installation.installationId)
-
-        // Check if user has made real commits today
-        const hasRealCommits = await hasUserCommitsToday(octokit, owner, repo)
-
-        if (hasRealCommits) {
-            await prisma.activityLog.create({
-                data: {
-                    installationId: installation.id,
-                    action: 'skipped_has_commits',
-                    message: 'User already has commits today',
-                },
-            })
-
-            return {
-                repo: installation.repoFullName,
-                status: 'skipped',
-                message: 'User has real commits today',
-            }
-        }
-
-        // Get README content
-        const readme = await getReadmeContent(octokit, owner, repo)
-
-        if (!readme) {
-            await prisma.activityLog.create({
-                data: {
-                    installationId: installation.id,
-                    action: 'skipped_no_readme',
-                    message: 'Repository has no README.md',
-                },
-            })
-
-            return {
-                repo: installation.repoFullName,
-                status: 'skipped',
-                message: 'No README.md found',
-            }
-        }
-
-        // Toggle whitespace in README
-        const newContent = toggleReadmeWhitespace(readme.content)
-
-        // Get author info using GitHub's noreply email format
-        // Format: ID+USERNAME@users.noreply.github.com
-        // This is guaranteed to show on the user's contribution graph
-        const githubAccount = installation.user.accounts.find(a => a.provider === 'github')
-        const author = githubAccount && githubAccount.providerUsername
-            ? {
-                name: installation.user.name || githubAccount.providerUsername,
-                email: `${githubAccount.providerAccountId}+${githubAccount.providerUsername}@users.noreply.github.com`
-            }
-            : undefined
-
-        // Commit the change with user attribution
-        const commitSha = await commitReadmeUpdate(
-            octokit,
-            owner,
-            repo,
-            newContent,
-            readme.sha,
-            author
-        )
-
-        // Update installation record
-        await prisma.installation.update({
-            where: { id: installation.id },
-            data: {
-                commitsToday: { increment: 1 },
-                lastRunAt: new Date(),
+        const { count } = await prisma.installation.updateMany({
+            where: {
+                id: installationId,
+                active: true,
+                OR: [{ nextEligibleAt: null }, { nextEligibleAt: { lte: now } }],
             },
+            data: { nextEligibleAt: new Date(now.getTime() + CLAIM_LEASE_MS) },
         })
-
-        // Log success
-        await prisma.activityLog.create({
-            data: {
-                installationId: installation.id,
-                action: 'commit_created',
-                message: `Commit ${commitSha.substring(0, 7)}`,
-            },
-        })
-
-        return {
-            repo: installation.repoFullName,
-            status: 'success',
-            message: `Created commit ${commitSha.substring(0, 7)}`,
-        }
-
+        return count === 1
     } catch (error) {
-        // Log the error
-        logError(error, {
-            installationId: installation.id,
-            repo: installation.repoFullName,
-            action: 'process installation',
-        })
-
-        const appError = toAppError(error)
-        const errorAction = getErrorAction(error)
-        const isRetryable = error instanceof AppError ? error.retryable : false
-
-        // Log to activity log
-        try {
-            await prisma.activityLog.create({
-                data: {
-                    installationId: installation.id,
-                    action: errorAction,
-                    message: appError.userMessage.substring(0, 500), // Limit message length
-                },
-            })
-        } catch (dbError) {
-            console.error('[CRON] Failed to log error to activity log:', dbError)
-        }
-
-        // If permission denied, deactivate the installation
-        if (error instanceof GitHubError && error.code === 'GITHUB_003') {
-            try {
-                await prisma.installation.update({
-                    where: { id: installation.id },
-                    data: { active: false },
-                })
-                console.log(`[CRON] Deactivated installation ${installation.id} due to permission error`)
-            } catch (dbError) {
-                console.error('[CRON] Failed to deactivate installation:', dbError)
-            }
-        }
-
-        return {
-            repo: installation.repoFullName,
-            status: 'error',
-            message: appError.userMessage,
-            errorCode: appError.code,
-            retryable: isRetryable,
-        }
+        logError(error, { action: 'claim installation', installationId })
+        return false
     }
 }
 
 // ============================================================================
-// Route Handlers
+// Route handler
 // ============================================================================
 
 export async function GET(request: NextRequest) {
-    const startTime = Date.now()
-
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = authHeader?.replace('Bearer ', '')
+    const startedAt = Date.now()
+    const now = new Date()
 
     if (!CRON_SECRET) {
         logError(new ConfigurationError('CRON_SECRET is not configured'))
@@ -285,110 +177,92 @@ export async function GET(request: NextRequest) {
         )
     }
 
-    if (cronSecret !== CRON_SECRET) {
+    if (!isAuthorized(request)) {
         console.warn('[CRON] Unauthorized access attempt')
-        return NextResponse.json(
-            { error: 'Unauthorized', code: 'AUTH_005' },
-            { status: 401 }
-        )
+        return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_005' }, { status: 401 })
     }
 
-    const results: ProcessingResult[] = []
-
+    let due: InstallationForCommit[]
     try {
-        // Get today's date at midnight
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-
-        // Get all active installations with user and GitHub account info for commit attribution
-        let installations
-        try {
-            installations = await prisma.installation.findMany({
-                where: { active: true },
-                include: {
-                    user: {
-                        select: {
-                            name: true,
-                            accounts: {
-                                where: { provider: 'github' },
-                                select: { provider: true, providerAccountId: true, providerUsername: true }
-                            }
-                        }
-                    },
-                },
-            })
-        } catch (dbError) {
-            logError(dbError, { action: 'fetch installations' })
-            const { body, status } = createErrorResponse(
-                DatabaseError.queryError('fetch active installations')
-            )
-            return NextResponse.json(body, { status })
-        }
-
-        console.log(`[CRON] Processing ${installations.length} active installations`)
-
-        // Process installations in parallel with concurrency limit for speed
-        const processingPromise = (async () => {
-            // Process in batches for better performance within timeout
-            for (let i = 0; i < installations.length; i += MAX_CONCURRENT_INSTALLATIONS) {
-                // Check if we're running out of time (leave 3s buffer)
-                const elapsed = Date.now() - startTime
-                if (elapsed > CRON_TIMEOUT_MS - 3000) {
-                    console.warn(`[CRON] Timeout approaching, stopping after ${results.length}/${installations.length} installations`)
-                    break
-                }
-
-                const batch = installations.slice(i, i + MAX_CONCURRENT_INSTALLATIONS)
-                const batchResults = await Promise.all(
-                    batch.map(installation => processInstallation(installation, today))
-                )
-                results.push(...batchResults)
-            }
-        })()
-
-        // Race against timeout
-        await Promise.race([
-            processingPromise,
-            createTimeout(CRON_TIMEOUT_MS),
-        ])
-
-        // Summary statistics
-        const summary = {
-            total: installations.length,
-            processed: results.length,
-            success: results.filter(r => r.status === 'success').length,
-            skipped: results.filter(r => r.status === 'skipped').length,
-            errors: results.filter(r => r.status === 'error').length,
-            durationMs: Date.now() - startTime,
-        }
-
-        console.log('[CRON] Completed:', JSON.stringify(summary))
-
-        return NextResponse.json({
-            success: true,
-            summary,
-            results,
-        })
-
-    } catch (error) {
-        logError(error, { action: 'cron job', durationMs: Date.now() - startTime })
-
-        // If we have partial results, still return them
-        if (results.length > 0) {
-            return NextResponse.json({
-                success: false,
-                error: 'Cron job partially failed',
-                processed: results.length,
-                results,
-            }, { status: 207 }) // 207 Multi-Status
-        }
-
-        const { body, status } = createErrorResponse(error)
+        due = await fetchDueInstallations(now, MAX_PER_RUN)
+    } catch (dbError) {
+        logError(dbError, { action: 'fetch due installations' })
+        const { body, status } = createErrorResponse(
+            DatabaseError.queryError('fetch due installations')
+        )
         return NextResponse.json(body, { status })
     }
+
+    // How much work is waiting in total, so the response says whether a backlog
+    // is building up rather than leaving it to be discovered by users.
+    let pendingTotal = due.length
+    try {
+        pendingTotal = await prisma.installation.count({
+            where: {
+                active: true,
+                user: { deletedAt: null },
+                OR: [{ nextEligibleAt: null }, { nextEligibleAt: { lte: now } }],
+            },
+        })
+    } catch {
+        // Non-essential statistic.
+    }
+
+    console.log(`[CRON] processing ${due.length} installation(s) of ${pendingTotal} due`)
+
+    const outcomes: CommitOutcome[] = []
+    let budgetExhausted = false
+    /** Rows another concurrent run had already claimed. */
+    let skippedNotClaimed = 0
+
+    for (let i = 0; i < due.length; i += CONCURRENCY) {
+        if (Date.now() - startedAt > RUN_BUDGET_MS - BUDGET_RESERVE_MS) {
+            budgetExhausted = true
+            console.warn(
+                `[CRON] Budget reached after ${outcomes.length}/${due.length}; the rest stay eligible for the next run`
+            )
+            break
+        }
+
+        const batch = due.slice(i, i + CONCURRENCY)
+
+        // `runCommitForInstallation` never throws, so one bad repository cannot
+        // take down the batch - no `Promise.all` rejection to lose results to.
+        const batchOutcomes = await Promise.all(
+            batch.map(async installation => {
+                const claimedAt = new Date()
+                if (!await claim(installation.id, claimedAt)) {
+                    // Another run got there first, or the row was paused in the
+                    // meantime. Leave it alone.
+                    skippedNotClaimed++
+                    return null
+                }
+                return runCommitForInstallation(installation, { now: claimedAt })
+            })
+        )
+
+        outcomes.push(...batchOutcomes.filter((o): o is CommitOutcome => o !== null))
+    }
+
+    const summary = {
+        due: pendingTotal,
+        selected: due.length,
+        processed: outcomes.length,
+        committed: outcomes.filter(o => o.status === 'committed').length,
+        skipped: outcomes.filter(o => o.status === 'skipped').length,
+        failed: outcomes.filter(o => o.status === 'failed').length,
+        notClaimed: skippedNotClaimed,
+        /** True when work remains; the next hourly run resumes from the watermark. */
+        remaining: Math.max(0, pendingTotal - outcomes.length),
+        budgetExhausted,
+        durationMs: Date.now() - startedAt,
+    }
+
+    console.log('[CRON] Completed:', JSON.stringify(summary))
+
+    return NextResponse.json({ success: true, summary, results: outcomes })
 }
 
-// Also support POST for flexibility
 export async function POST(request: NextRequest) {
     return GET(request)
 }

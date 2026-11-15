@@ -202,6 +202,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         commitsToday: inst.commitsToday,
         lastRunAt: inst.lastRunAt?.toISOString() || null,
         createdAt: inst.createdAt.toISOString(),
+        isFork: inst.isFork,
+        isPrivate: inst.isPrivate,
         activityLogs: inst.activityLogs.map(log => ({
             id: log.id,
             action: log.action,

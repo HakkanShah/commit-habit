@@ -28,6 +28,8 @@ export async function GET() {
                 commitsToday: true,
                 lastRunAt: true,
                 createdAt: true,
+                isFork: true,
+                isPrivate: true,
                 activityLogs: {
                     orderBy: { createdAt: 'desc' },
                     take: 3,
@@ -52,6 +54,8 @@ export async function GET() {
                 commitsToday: inst.commitsToday,
                 lastRunAt: inst.lastRunAt?.toISOString() || null,
                 createdAt: inst.createdAt.toISOString(),
+                isFork: inst.isFork,
+                isPrivate: inst.isPrivate,
                 activityLogs: inst.activityLogs.map(log => ({
                     id: log.id,
                     action: log.action,

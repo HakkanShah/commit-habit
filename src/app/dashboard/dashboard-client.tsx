@@ -8,6 +8,7 @@ import { WelcomeAnimation } from './WelcomeAnimation'
 import { OnboardingPopup } from './onboarding-popup'
 import { FeedbackReminder } from './feedback-reminder'
 import { useToast } from '@/components/toast'
+import { MAX_COMMITS_PER_DAY } from '@/lib/limits'
 import { apiFetch } from '@/lib/api-client'
 import Link from 'next/link'
 
@@ -26,6 +27,8 @@ interface Installation {
     active: boolean
     commitsToday: number
     lastRunAt: string | null
+    isFork?: boolean
+    isPrivate?: boolean
     createdAt: string
     activityLogs: ActivityLog[]
 }
@@ -1025,7 +1028,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                     ) : (
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                                             {installations.map((inst) => {
-                                                const commitPercent = (inst.commitsToday / 5) * 100
+                                                const commitPercent = (inst.commitsToday / MAX_COMMITS_PER_DAY) * 100
                                                 const daysActive = Math.floor((Date.now() - new Date(inst.createdAt).getTime()) / (1000 * 60 * 60 * 24))
                                                 return (
                                                     <div key={inst.id} className="bg-white/[0.02] rounded-xl p-4 border border-white/5 hover:border-white/10 transition-colors">
@@ -1069,7 +1072,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                                                                 />
                                                             </div>
                                                             <span className="text-xs text-[#8b949e] tabular-nums">
-                                                                {inst.commitsToday}/5
+                                                                {inst.commitsToday}/{MAX_COMMITS_PER_DAY}
                                                             </span>
                                                         </div>
                                                     </div>

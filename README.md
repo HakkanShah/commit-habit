@@ -178,6 +178,9 @@ pnpm install
 5. Subscribe to **Events**:
    - ✅ Installation
    - ✅ Installation repositories
+   - ✅ Repository — **required**: without it, a repository rename or transfer
+     leaves a stale `owner/repo` in the database and automation stops for that
+     user with a permanent 404.
 
 6. Click **"Create GitHub App"**
 7. **Generate and download** a Private Key (`.pem` file)
@@ -429,25 +432,109 @@ Commit Habit implements enterprise-grade security practices:
 
 ### Configure Cron Job
 
-The `vercel.json` includes a cron job running daily at 6 AM UTC:
+The automation endpoint is `GET /api/cron/daily`, protected by
+`Authorization: Bearer $CRON_SECRET`.
+
+**Primary scheduler — cron-job.org (hourly).** This is what actually drives the
+automation in production:
+
+| Setting | Value |
+|---------|-------|
+| URL | `https://your-app.vercel.app/api/cron/daily` |
+| Schedule | every hour |
+| Header | `Authorization: Bearer <your CRON_SECRET>` |
+
+**Vercel cron — daily backup.** `vercel.json` keeps a once-a-day run as a safety
+net in case the external scheduler is down:
 
 ```json
 {
   "crons": [
-    {
-      "path": "/api/cron/daily",
-      "schedule": "0 6 * * *"
-    }
+    { "path": "/api/cron/daily", "schedule": "0 6 * * *" }
   ]
 }
 ```
+
+> ⚠️ Do **not** set this to a sub-daily expression. Vercel **Hobby accounts only
+> permit daily cron jobs**, and a more frequent expression fails the deployment
+> outright with a configuration error — it does not silently downgrade. Frequency
+> belongs in cron-job.org, not here.
+
+Running hourly is safe and cheap: each repository still receives at most
+`MAX_COMMITS_PER_DAY` commits (`src/lib/limits.ts`), and an installation already
+handled today is skipped without spending any GitHub API quota. The hourly
+cadence exists so that a run which cannot work through the whole queue inside
+its time budget is resumed within the hour, instead of leaving those users
+without a commit for the day.
+
+The per-run time budget defaults to 25s to stay inside cron-job.org's 30s
+timeout. If you move to a scheduler that waits longer, raise both
+`CRON_RUN_BUDGET_MS` and the `maxDuration` export in the route.
 
 ### Post-Deployment Checklist
 
 - [ ] Update GitHub App URLs to your Vercel domain
 - [ ] Run database migrations: `npx prisma migrate deploy`
+- [ ] Subscribe the GitHub App to the **Repository** event
+- [ ] Set `SESSION_SECRET` (authentication fails closed without it — there is
+      deliberately no fallback value)
 - [ ] Verify webhook delivery in GitHub App settings
 - [ ] Test the OAuth flow end-to-end
+- [ ] Hit `GET /api/cron/daily` manually once and confirm the response summary
+      shows `remaining: 0` (a non-zero `remaining` with `budgetExhausted: true`
+      means the queue is larger than one run can handle)
+
+---
+
+## 🩺 Troubleshooting
+
+### A commit was created but my contribution graph is empty
+
+GitHub decides what counts, and three rules catch most reports:
+
+| Cause | How to confirm | Fix |
+|-------|----------------|-----|
+| **The repository is a fork** | The dashboard card shows a fork warning | Forks *never* count, with no setting to change it. Use a non-forked repository. |
+| **The repository is private** | The dashboard card shows a private warning | Enable *Include private contributions on my profile* in [GitHub profile settings](https://github.com/settings/profile). |
+| **The commit is not attributed to you** | Open the commit on GitHub — the author shows as the app's bot rather than your avatar | Sign in with GitHub once so the app can link your account id. The app refuses to commit at all without a linked identity, and logs `skipped_no_identity`. |
+
+Commits are authored as `ID+USERNAME@users.noreply.github.com`. GitHub resolves
+that address by account id, so it counts even when your email is private. A
+profile email only counts while it is a *verified* address on the account, which
+is why attribution is never taken from the profile email.
+
+### Some users get commits and others do not
+
+Check the cron response summary:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" https://your-app.vercel.app/api/cron/daily
+```
+
+- `remaining: 0` — the whole queue was processed.
+- `remaining > 0` with `budgetExhausted: true` — the queue is bigger than one run
+  can handle. The leftovers stay eligible and the next hourly run continues from
+  there, so the backlog clears itself. If `remaining` never reaches 0, the
+  cron-job.org schedule is firing too rarely for the number of installations.
+
+The scheduler orders work by `nextEligibleAt`, oldest first, so a repository that
+missed a run is at the *front* of the next one. No repository can be starved
+indefinitely.
+
+### Reading a repository's history
+
+Every decision is recorded in `ActivityLog` and shown on the dashboard card:
+
+| Action | Meaning |
+|--------|---------|
+| `commit_created` / `manual_commit` | A commit was made |
+| `skipped_has_commits` | You already committed today — nothing needed |
+| `skipped_daily_limit` | Today's quota was already used |
+| `skipped_no_readme` | The repository has no README to touch |
+| `skipped_no_identity` | No linked GitHub account to attribute commits to |
+| `warning_fork` / `warning_private` | The commit will not reach your graph |
+| `error_permission` | Access lost; the installation was deactivated |
+| `error_rate_limited` / `error_network` | Transient; retried later the same day |
 
 ---
 

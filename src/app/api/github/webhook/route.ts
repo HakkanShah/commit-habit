@@ -48,6 +48,12 @@ interface InstallationEventPayload {
     sender: GitHubSender
 }
 
+interface RepositoryEventPayload {
+    action: string
+    repository: { id: number; full_name: string; default_branch?: string; fork?: boolean; private?: boolean }
+    changes?: { repository?: { name?: { from?: string } }; owner?: unknown }
+}
+
 interface InstallationRepositoriesEventPayload {
     action: 'added' | 'removed'
     installation: { id: number }
@@ -113,8 +119,10 @@ function verifyWebhookSignature(payload: string, signature: string | null): bool
 /**
  * Validate webhook event type
  */
-function validateEventType(event: string | null): event is 'installation' | 'installation_repositories' | 'ping' {
-    const supportedEvents = ['installation', 'installation_repositories', 'ping']
+function validateEventType(
+    event: string | null
+): event is 'installation' | 'installation_repositories' | 'repository' | 'ping' {
+    const supportedEvents = ['installation', 'installation_repositories', 'repository', 'ping']
     return event !== null && supportedEvents.includes(event)
 }
 
@@ -147,6 +155,14 @@ async function findOrCreateGitHubUser(sender: GitHubSender) {
         })
 
         if (existingAccount) {
+            // A soft-deleted user installing the app again would otherwise quietly
+            // get live installations attached to a dead account. Surface it instead.
+            if (existingAccount.user.deletedAt) {
+                console.warn(
+                    `[WEBHOOK] Install by soft-deleted user ${existingAccount.userId} - not attaching repositories`
+                )
+                throw DatabaseError.queryError('user is deleted', { userId: existingAccount.userId })
+            }
             return existingAccount.user
         }
 
@@ -435,6 +451,59 @@ async function handleInstallationRepositoriesEvent(data: InstallationRepositorie
     }
 }
 
+/**
+ * Keep `repoFullName` in step with GitHub.
+ *
+ * Nothing used to listen for repository renames or transfers, so the stored
+ * `owner/repo` went stale the moment a user renamed a repository or moved it to
+ * an organisation. Every later run then asked GitHub for a path that no longer
+ * existed, got a 404, and logged "not found" forever - automation simply stopped
+ * for that user with no way to recover short of removing and re-adding the repo.
+ *
+ * The repository id is stable across both renames and transfers, which is what
+ * makes this lookup reliable.
+ */
+async function handleRepositoryEvent(data: RepositoryEventPayload): Promise<void> {
+    const { action, repository } = data
+
+    if (!repository?.id || !repository.full_name) {
+        console.warn('[WEBHOOK] repository event without usable repository payload')
+        return
+    }
+
+    if (action !== 'renamed' && action !== 'transferred') {
+        return
+    }
+
+    try {
+        const result = await prisma.installation.updateMany({
+            where: { repoId: repository.id },
+            data: {
+                repoFullName: repository.full_name,
+                // The cached facts may no longer hold after a transfer; let the
+                // engine re-resolve them on its next run.
+                defaultBranch: null,
+                readmePath: null,
+                ...(typeof repository.fork === 'boolean' ? { isFork: repository.fork } : {}),
+                ...(typeof repository.private === 'boolean' ? { isPrivate: repository.private } : {}),
+            },
+        })
+
+        if (result.count > 0) {
+            console.log(
+                `[WEBHOOK] ${action}: updated ${result.count} installation(s) to ${repository.full_name}`
+            )
+        }
+    } catch (error) {
+        logError(error, { action: `repository ${action}`, repoId: repository.id })
+        throw DatabaseError.queryError(
+            'update renamed repository',
+            { repoId: repository.id },
+            error instanceof Error ? error : undefined
+        )
+    }
+}
+
 // ============================================================================
 // Main Route Handler
 // ============================================================================
@@ -509,6 +578,10 @@ export async function POST(request: NextRequest) {
 
             case 'installation_repositories':
                 await handleInstallationRepositoriesEvent(data as unknown as InstallationRepositoriesEventPayload)
+                break
+
+            case 'repository':
+                await handleRepositoryEvent(data as unknown as RepositoryEventPayload)
                 break
         }
 

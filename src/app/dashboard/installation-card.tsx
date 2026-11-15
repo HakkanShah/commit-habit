@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Pause, Play, Loader2, GitCommit, Trash2, MoreVertical, X, ExternalLink, Clock, Zap, ChevronDown, CheckCircle, XCircle, SkipForward, History } from 'lucide-react'
+import { Pause, Play, Loader2, GitCommit, Trash2, MoreVertical, X, ExternalLink, Clock, Zap, ChevronDown, CheckCircle, XCircle, SkipForward, History, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/components/toast'
+import { MAX_COMMITS_PER_DAY } from '@/lib/limits'
 
 interface ActivityLog {
     id: string
@@ -20,6 +21,10 @@ interface Installation {
     lastRunAt: string | null
     createdAt: string
     activityLogs: ActivityLog[]
+    /** Commits in a fork never reach the contribution graph. */
+    isFork?: boolean
+    /** Private repos need "include private contributions" enabled on GitHub. */
+    isPrivate?: boolean
 }
 
 interface InstallationCardProps {
@@ -148,18 +153,56 @@ export function InstallationCard({ installation, isLoading = false, isCommitting
                             {getRelativeTime(installation.lastRunAt)}
                         </span>
                     </div>
+
+                    {/*
+                      Visibility warnings. A commit can succeed perfectly and still
+                      leave the contribution graph empty - GitHub never counts
+                      commits in forks, and private commits only show when the user
+                      has opted in. Without this notice the app looks broken for
+                      reasons that are not the app's fault and that the user can fix.
+                    */}
+                    {(installation.isFork || installation.isPrivate) && (
+                        <div className="mt-1.5 flex flex-col gap-1">
+                            {installation.isFork && (
+                                <span className="flex items-start gap-1.5 text-[11px] leading-snug text-[#d29922]">
+                                    <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
+                                    <span>
+                                        This is a fork — GitHub never counts commits in forks on your
+                                        contribution graph. Use a non-forked repository.
+                                    </span>
+                                </span>
+                            )}
+                            {installation.isPrivate && (
+                                <span className="flex items-start gap-1.5 text-[11px] leading-snug text-[#8b949e]">
+                                    <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
+                                    <span>
+                                        Private repository — turn on{' '}
+                                        <a
+                                            href="https://github.com/settings/profile"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="underline hover:text-[#58a6ff]"
+                                        >
+                                            private contributions
+                                        </a>{' '}
+                                        for these commits to appear.
+                                    </span>
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Progress indicator */}
                 <div className="hidden sm:flex flex-col items-end gap-1 mr-2">
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-[#8b949e]">Today</span>
-                        <span className="text-sm font-bold tabular-nums">{installation.commitsToday}/5</span>
+                        <span className="text-sm font-bold tabular-nums">{installation.commitsToday}/{MAX_COMMITS_PER_DAY}</span>
                     </div>
                     <div className="w-24 h-1.5 bg-[#21262d] rounded-full overflow-hidden">
                         <div
                             className="h-full bg-gradient-to-r from-[#39d353] to-[#58a6ff] rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(100, (installation.commitsToday / 5) * 100)}%` }}
+                            style={{ width: `${Math.min(100, (installation.commitsToday / MAX_COMMITS_PER_DAY) * 100)}%` }}
                         />
                     </div>
                 </div>
