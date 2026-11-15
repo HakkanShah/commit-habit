@@ -110,7 +110,7 @@ export function FeedbackReminder({ isBusy }: FeedbackReminderProps) {
                 <div
                     className="absolute inset-0 opacity-20"
                     style={{
-                        backgroundImage: `url('/brick-wall.png')`,
+                        backgroundImage: `url('/brick-wall.webp')`,
                         backgroundSize: '150px',
                     }}
                 />

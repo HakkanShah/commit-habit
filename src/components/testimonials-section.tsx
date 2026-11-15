@@ -140,7 +140,6 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
             className="relative w-[340px] md:w-[380px] flex-shrink-0 mx-2 h-[240px] md:h-[260px] group cursor-pointer transform-gpu perspective-1000"
             style={{
                 transform: `rotate(${randomRotate}deg) scale(${randomScale}) translateZ(0)`,
-                willChange: 'transform',
                 contain: 'layout style paint',
             }}
             onClick={onClick}
@@ -149,7 +148,7 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
             <div
                 className="absolute inset-0 rounded-lg overflow-hidden transform-gpu"
                 style={{
-                    backgroundImage: `url('/brick-wall.png')`,
+                    backgroundImage: `url('/brick-wall.webp')`,
                     backgroundSize: '150px',
                     backgroundPosition: 'center',
                 }}
@@ -187,7 +186,7 @@ function BrickCard({ testimonial, index, onClick }: { testimonial: Testimonial, 
                             }}
                         >
                             <img
-                                src={`https://github.com/${testimonial.githubUsername}.png`}
+                                src={`https://github.com/${testimonial.githubUsername}.png?size=160`}
                                 alt={testimonial.userName}
                                 width={64}
                                 height={80}
@@ -289,7 +288,6 @@ function CssMarquee({ items, direction = 'left', speed = '40s', className, onCar
                 className={`flex gap-0 w-max shrink-0 group-hover/row:[animation-play-state:paused] ${direction === 'left' ? 'animate-marquee-left' : 'animate-marquee-right'}`}
                 style={{
                     animationDuration: speed,
-                    willChange: 'transform',
                     backfaceVisibility: 'hidden',
                     perspective: 1000,
                     transformStyle: 'preserve-3d',
@@ -497,7 +495,7 @@ export function TestimonialsSection() {
                             <div
                                 className="relative rounded-2xl overflow-hidden"
                                 style={{
-                                    backgroundImage: `url('/brick-wall.png')`,
+                                    backgroundImage: `url('/brick-wall.webp')`,
                                     backgroundSize: '200px',
                                     backgroundPosition: 'center',
                                 }}
@@ -681,7 +679,7 @@ export function TestimonialsSection() {
                             <div
                                 className="relative rounded-2xl overflow-hidden border border-white/20"
                                 style={{
-                                    backgroundImage: `url('/brick-wall.png')`,
+                                    backgroundImage: `url('/brick-wall.webp')`,
                                     backgroundSize: '150px',
                                     backgroundPosition: 'center',
                                 }}
@@ -704,7 +702,7 @@ export function TestimonialsSection() {
                                         <div className="relative">
                                             <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-white/30 shadow-lg">
                                                 <img
-                                                    src={`https://github.com/${selectedTestimonial.githubUsername}.png`}
+                                                    src={`https://github.com/${selectedTestimonial.githubUsername}.png?size=160`}
                                                     alt={selectedTestimonial.userName}
                                                     loading="lazy"
                                                     decoding="async"
@@ -769,7 +767,7 @@ export function TestimonialsSection() {
             <div
                 className="absolute inset-0 pointer-events-none opacity-30"
                 style={{
-                    backgroundImage: `url('/brick-wall.png')`,
+                    backgroundImage: `url('/brick-wall.webp')`,
                     backgroundSize: '400px',
                     filter: 'grayscale(100%) contrast(120%) brightness(50%)'
                 }}

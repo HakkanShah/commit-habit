@@ -262,6 +262,25 @@ const BACKOFF_STEPS_MS = [
 ]
 
 /**
+ * How long a repository that cannot produce a commit for a *structural* reason
+ * waits before being looked at again.
+ *
+ * A repository with no README, or belonging to an account with no linked GitHub
+ * identity, will still have no README and no identity tomorrow. Re-checking all
+ * of them every single day costs an API call each and, worse, occupies slots in
+ * a run that other users are waiting for - in production 9 of 11 skips in a
+ * single run were the same account's README-less repositories.
+ *
+ * So the interval grows: tomorrow, then 2 days, then 4, capped at a week. A user
+ * who adds a README still gets picked up the next day the first time, while a
+ * repository that has been empty for months is only polled weekly.
+ */
+export function nextEligibleAfterStructuralSkip(unproductiveRuns: number, now: Date): Date {
+    const days = Math.min(2 ** Math.max(0, unproductiveRuns - 1), 7)
+    return new Date(startOfNextUtcDay(now).getTime() + (days - 1) * 24 * 60 * 60 * 1000)
+}
+
+/**
  * When to try again after a failure.
  *
  * Retryable failures come back within the same day so a transient GitHub outage
@@ -330,7 +349,11 @@ export async function runCommitForInstallation(
                 'Cannot attribute commits to you yet. Sign in with GitHub once to link your account, otherwise commits would not appear on your contribution graph.',
                 { dedupePerDay: true, now }
             )
-            await markHandled(installation.id, startOfNextUtcDay(now))
+            await markHandled(
+                installation.id,
+                nextEligibleAfterStructuralSkip(installation.failureCount + 1, now),
+                { countUnproductive: true }
+            )
             return {
                 status: 'skipped',
                 repo,
@@ -431,11 +454,16 @@ export async function runCommitForInstallation(
                 'No README found in this repository. Add a README so there is a file to touch.',
                 { dedupePerDay: true, now }
             )
-            await markHandled(installation.id, startOfNextUtcDay(now), {
-                defaultBranch: meta.defaultBranch,
-                isFork: meta.isFork,
-                isPrivate: meta.isPrivate,
-            })
+            await markHandled(
+                installation.id,
+                nextEligibleAfterStructuralSkip(installation.failureCount + 1, now),
+                {
+                    defaultBranch: meta.defaultBranch,
+                    isFork: meta.isFork,
+                    isPrivate: meta.isPrivate,
+                    countUnproductive: true,
+                }
+            )
             return {
                 status: 'skipped',
                 repo,
@@ -509,21 +537,34 @@ export async function runCommitForInstallation(
 /**
  * Record that this installation has been dealt with for now.
  * `nextEligibleAt` is what keeps the scheduler from re-picking it.
+ *
+ * `countUnproductive` keeps `failureCount` climbing for structural skips, which
+ * is what drives the growing re-check interval. It is reset by any run that
+ * produces a commit, and by the ordinary skips (`has_real_commits`,
+ * `daily_limit`) that mean the repository is working exactly as intended.
  */
 async function markHandled(
     installationId: string,
     nextEligibleAt: Date,
-    extra: { defaultBranch?: string; isFork?: boolean; isPrivate?: boolean } = {}
+    extra: {
+        defaultBranch?: string
+        isFork?: boolean
+        isPrivate?: boolean
+        countUnproductive?: boolean
+    } = {}
 ): Promise<void> {
+    const { countUnproductive, ...fields } = extra
+
     try {
         await prisma.installation.update({
             where: { id: installationId },
             data: {
                 nextEligibleAt,
                 lastRunAt: new Date(),
-                failureCount: 0,
-                lastError: null,
-                ...extra,
+                ...(countUnproductive
+                    ? { failureCount: { increment: 1 } }
+                    : { failureCount: 0, lastError: null }),
+                ...fields,
             },
         })
     } catch (error) {

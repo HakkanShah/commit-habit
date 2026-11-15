@@ -409,7 +409,7 @@ export function DashboardClient({ user, displayName, githubAppUrl, initialInstal
                             <span className="font-black text-xl sm:text-2xl flex items-center tracking-wide">
                                 <span className="text-white">C</span>
                                 <img
-                                    src="/logo.png"
+                                    src="/logo.webp"
                                     alt="o"
                                     className="h-[0.9em] w-auto object-contain inline-block align-middle -mx-[0.05em] translate-y-[0.1em] transition-transform group-hover:scale-110 group-hover:rotate-12"
                                     style={{ filter: "drop-shadow(0 0 15px rgba(57,211,83,0.5))" }}
