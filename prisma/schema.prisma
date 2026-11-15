@@ -73,6 +73,30 @@ model Installation {
   active          Boolean       @default(true)
   commitsToday    Int           @default(0)
   lastRunAt       DateTime?
+
+  // --- Scheduling ---
+  // The scheduler only picks up installations whose nextEligibleAt has passed and
+  // orders them oldest-first, so a run that cannot finish the whole queue resumes
+  // where it left off instead of always starving the same tail of the table.
+  nextEligibleAt  DateTime?
+  // UTC day ("YYYY-MM-DD") that commitsToday belongs to, so the counter resets
+  // deterministically instead of depending on lastRunAt being set.
+  commitDayUtc    String?
+  // Last run that actually produced a commit (lastRunAt is only an attempt marker).
+  lastCommitAt    DateTime?
+  // Consecutive failures, used for exponential backoff.
+  failureCount    Int           @default(0)
+  lastError       String?
+
+  // --- Repository facts cached from GitHub ---
+  // Real readme path; repos use README.md, readme.md, docs/README.md, ...
+  readmePath      String?
+  defaultBranch   String?
+  // Commits to forks never appear on the contribution graph, and private repos
+  // only count if the user enabled "private contributions". Surfaced to the user.
+  isFork          Boolean       @default(false)
+  isPrivate       Boolean       @default(false)
+
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   activityLogs    ActivityLog[]
@@ -80,6 +104,8 @@ model Installation {
   @@unique([installationId, repoId])
   @@index([userId])
   @@index([active])
+  // Drives the scheduler query.
+  @@index([active, nextEligibleAt])
 }
 
 model ActivityLog {
@@ -92,6 +118,9 @@ model ActivityLog {
 
   @@index([installationId])
   @@index([createdAt])
+  // Lets the engine look up "what did we already log for this repo today"
+  // without scanning the whole log table.
+  @@index([installationId, createdAt])
 }
 
 // Visitor analytics for Discord notifications (rate-limited per IP+page)

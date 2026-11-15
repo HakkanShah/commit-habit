@@ -6,18 +6,44 @@ import { AuthenticationError, ConfigurationError, logError } from './errors'
 // Configuration
 // ============================================================================
 
-const SESSION_SECRET = process.env.SESSION_SECRET || process.env.CRON_SECRET
+/**
+ * Session signing key.
+ *
+ * This used to fall back to `CRON_SECRET` and then to a hardcoded literal
+ * (`'default-secret-change-me-in-production'`). Both fallbacks are session
+ * forgery waiting to happen: the literal is in a public repository, so anyone
+ * could mint a cookie for any `userId` - including one whose database row has
+ * `role: 'ADMIN'` - against any deployment that forgot the variable. Reusing
+ * `CRON_SECRET` is only marginally better, since that value is handed to an
+ * external cron service.
+ *
+ * There is no fallback now. A deployment without `SESSION_SECRET` fails closed:
+ * tokens cannot be signed or verified, so nobody is logged in, rather than
+ * everybody being forgeable.
+ */
+const SESSION_SECRET = process.env.SESSION_SECRET
 
-// Validate session secret at startup
 if (!SESSION_SECRET) {
-    console.error('[SECURITY] SESSION_SECRET is not configured - using insecure default!')
+    console.error(
+        '[SECURITY] SESSION_SECRET is not set. Authentication is disabled until it is configured. Generate one with: openssl rand -hex 32'
+    )
 } else if (SESSION_SECRET.length < 32) {
     console.warn('[SECURITY] SESSION_SECRET should be at least 32 characters long')
 }
 
-const EFFECTIVE_SESSION_SECRET = SESSION_SECRET || 'default-secret-change-me-in-production'
 const SESSION_COOKIE_NAME = 'commit-habit-session'
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30 // 30 days
+
+/** Returns the signing key or throws - never a guessable default. */
+function requireSessionSecret(): string {
+    if (!SESSION_SECRET) {
+        throw new ConfigurationError(
+            'SESSION_SECRET is not configured',
+            { hint: 'Set SESSION_SECRET to a random 32+ character value' }
+        )
+    }
+    return SESSION_SECRET
+}
 
 // ============================================================================
 // Types
@@ -62,7 +88,7 @@ export function createSessionToken(payload: SessionPayload): string {
                 providerAccountId: payload.providerAccountId,
                 name: payload.name,
             },
-            EFFECTIVE_SESSION_SECRET,
+            requireSessionSecret(),
             { expiresIn: '30d' }
         )
     } catch (error) {
@@ -84,7 +110,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
     }
 
     try {
-        const decoded = jwt.verify(token, EFFECTIVE_SESSION_SECRET) as SessionPayload
+        const decoded = jwt.verify(token, requireSessionSecret()) as SessionPayload
 
         // Validate the decoded payload structure
         if (!decoded.userId || !decoded.provider || !decoded.providerAccountId) {
@@ -123,7 +149,7 @@ export function verifySessionTokenStrict(token: string): SessionPayload {
     }
 
     try {
-        const decoded = jwt.verify(token, EFFECTIVE_SESSION_SECRET) as SessionPayload
+        const decoded = jwt.verify(token, requireSessionSecret()) as SessionPayload
 
         // Validate the decoded payload structure
         if (!decoded.userId || !decoded.provider || !decoded.providerAccountId) {

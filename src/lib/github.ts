@@ -25,6 +25,53 @@ const DEFAULT_TIMEOUT_MS = 8000 // 8 seconds (optimized for cron-job.org)
 const MAX_RETRIES = 1 // Reduced retries to fit timeout constraints
 const INITIAL_RETRY_DELAY_MS = 500 // Faster retry
 
+/**
+ * Commit messages this app uses for its automated commits.
+ *
+ * Automated commits are attributed to the user (that is the whole point - they
+ * have to land on the contribution graph), which means they come back from the
+ * GitHub API looking exactly like the user's own work. The message is the only
+ * thing that distinguishes them, so this list is the single source of truth and
+ * must stay in sync with the messages we actually write.
+ */
+export const AUTOMATED_COMMIT_MESSAGES = [
+    'fix: normalize whitespace in README',
+    'chore: format README.md',
+    'style: clean up README formatting',
+    'docs: fix trailing whitespace in README',
+    'fix: remove extra blank lines in README',
+] as const
+
+/** True when a commit message is one this app generated. */
+export function isAutomatedCommitMessage(message: string): boolean {
+    if (!message) return false
+    const firstLine = message.split('\n', 1)[0].trim()
+    return AUTOMATED_COMMIT_MESSAGES.some(m => firstLine === m || firstLine.startsWith(m))
+}
+
+/**
+ * Start of the current UTC day.
+ *
+ * Everything in the scheduler is in UTC on purpose. The previous code used
+ * `new Date().setHours(0,0,0,0)`, which is the server's local midnight - that
+ * silently changes meaning between a developer machine and the deployment, and
+ * made "today" disagree between the cron job and the commit check.
+ */
+export function startOfUtcDay(now: Date = new Date()): Date {
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+}
+
+/** Start of the next UTC day - when a finished installation becomes eligible again. */
+export function startOfNextUtcDay(now: Date = new Date()): Date {
+    const start = startOfUtcDay(now)
+    return new Date(start.getTime() + 24 * 60 * 60 * 1000)
+}
+
+/** The UTC calendar day as "YYYY-MM-DD", used to key the per-day commit counter. */
+export function utcDayKey(now: Date = new Date()): string {
+    return startOfUtcDay(now).toISOString().slice(0, 10)
+}
+
 // Validate configuration at module load
 const configErrors: string[] = []
 if (!GITHUB_APP_ID) configErrors.push('GITHUB_APP_ID')
@@ -451,145 +498,258 @@ export async function exchangeCodeForUser(code: string): Promise<{
 }
 
 /**
- * Check if a user has made any commits today (excluding automated commits)
+ * Check whether the user already has a genuine commit in this repository today.
+ *
+ * Two bugs used to live here:
+ *
+ *  1. It listed *every* commit on the default branch, so a commit by a
+ *     collaborator, a bot like Dependabot, or a merge of someone else's PR
+ *     counted as "the user committed today" and the user's own commit was
+ *     skipped. We now ask GitHub for commits by this author only, which is the
+ *     same attribution the contribution graph uses.
+ *
+ *  2. Any failure (timeout, rate limit, 5xx, empty repository) returned `true`
+ *     as a "fail-safe". That turned every transient GitHub hiccup into a
+ *     permanent, silent skip that was then logged as "user already has commits
+ *     today" - a log entry that was simply false. Errors now propagate so the
+ *     caller can record a real error and retry with backoff.
+ *
+ * @param authorLogin GitHub login to scope the query to. Required: without it
+ *                    the answer is about the repository, not about the user.
  */
 export async function hasUserCommitsToday(
     octokit: Octokit,
     owner: string,
-    repo: string
+    repo: string,
+    authorLogin: string,
+    now: Date = new Date()
 ): Promise<boolean> {
     const { owner: validOwner, repo: validRepo } = validateRepoName(`${owner}/${repo}`)
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const since = today.toISOString()
+    if (!authorLogin || typeof authorLogin !== 'string') {
+        throw ValidationError.missingField('authorLogin')
+    }
+
+    const since = startOfUtcDay(now).toISOString()
 
     try {
         const { data: commits } = await withRetry(
             () => octokit.repos.listCommits({
                 owner: validOwner,
                 repo: validRepo,
+                author: authorLogin,
                 since,
                 per_page: 100,
             }),
             { maxRetries: 2 }
         )
 
-        // Filter out automated commits (our commits have specific messages)
-        const automatedMessages = [
-            'fix: normalize whitespace in README',
-            'chore: format README.md',
-            'style: clean up README formatting',
-            'docs: fix trailing whitespace in README',
-            'fix: remove extra blank lines in README',
-        ]
-
-        const realCommits = commits.filter(
-            commit => !automatedMessages.some(msg => commit.commit.message.startsWith(msg))
-        )
-
-        return realCommits.length > 0
+        // Our own commits are attributed to the user, so they show up here too.
+        // Only commits we did not write count as the user's real activity.
+        return commits.some(commit => !isAutomatedCommitMessage(commit.commit.message))
     } catch (error) {
-        // Log the error but return true as fail-safe (don't create commits if uncertain)
-        logError(error, { owner: validOwner, repo: validRepo, action: 'check commits today' })
-
-        // If it's a permission error, rethrow it
-        if (error instanceof GitHubError &&
-            (error.code === 'GITHUB_003' || error.code === 'GITHUB_002')) {
-            throw error
+        // An empty repository answers 409 to listCommits. There is nothing to
+        // skip for and nothing to commit against, so say so explicitly instead
+        // of reporting it as "has commits".
+        if (isEmptyRepositoryError(error)) {
+            throw GitHubError.conflict(
+                'Repository is empty - push at least one commit before enabling automation',
+                { owner: validOwner, repo: validRepo, reason: 'empty repository' }
+            )
         }
 
-        // For other errors, assume has commits (fail-safe to prevent unwanted commits)
-        console.warn(`[WARN] Error checking commits for ${validOwner}/${validRepo}, assuming has commits (fail-safe)`)
-        return true
+        logError(error, { owner: validOwner, repo: validRepo, action: 'check commits today' })
+        handleOctokitError(error, {
+            owner: validOwner,
+            repo: validRepo,
+            action: 'list commits',
+            resource: `${validOwner}/${validRepo}`,
+        })
+    }
+}
+
+/** GitHub answers 409 Conflict for git operations against a repository with no commits. */
+export function isEmptyRepositoryError(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false
+    const status = (error as { status?: number }).status
+    const message = String((error as { message?: string }).message ?? '')
+    return status === 409 || /repository is empty/i.test(message)
+}
+
+/**
+ * Fetch the facts about a repository that decide whether automation can work at
+ * all, and whether the resulting commits will actually be visible.
+ *
+ * Commits in a **fork** never appear on the contribution graph, and commits in a
+ * **private** repository only appear if the user turned on private contributions
+ * in their GitHub profile. Both cases used to produce a perfectly successful
+ * commit and a completely unchanged graph, which is the single most confusing
+ * way for this app to fail.
+ */
+export async function getRepoMeta(
+    octokit: Octokit,
+    owner: string,
+    repo: string
+): Promise<{ defaultBranch: string; isFork: boolean; isPrivate: boolean; fullName: string }> {
+    const { owner: validOwner, repo: validRepo } = validateRepoName(`${owner}/${repo}`)
+
+    try {
+        const { data } = await withRetry(
+            () => octokit.repos.get({ owner: validOwner, repo: validRepo }),
+            { maxRetries: 2 }
+        )
+
+        return {
+            defaultBranch: data.default_branch,
+            isFork: Boolean(data.fork),
+            isPrivate: Boolean(data.private),
+            fullName: data.full_name,
+        }
+    } catch (error) {
+        logError(error, { owner: validOwner, repo: validRepo, action: 'get repo metadata' })
+        handleOctokitError(error, {
+            owner: validOwner,
+            repo: validRepo,
+            resource: `${validOwner}/${validRepo}`,
+            action: 'read repository',
+        })
     }
 }
 
 /**
- * Get the current README content
+ * Read the repository's README.
+ *
+ * The old implementation asked for the literal path `README.md`. Repositories
+ * that use `readme.md`, `Readme.md`, `README.markdown`, `docs/README.md` or
+ * `README.rst` therefore 404'd and were skipped forever, which is a large part
+ * of why automation worked for some users and not others. `repos.getReadme`
+ * resolves whatever the repository actually uses, and we commit back to that
+ * same path.
  */
 export async function getReadmeContent(
     octokit: Octokit,
     owner: string,
     repo: string
-): Promise<{ content: string; sha: string } | null> {
+): Promise<{ content: string; sha: string; path: string } | null> {
     const { owner: validOwner, repo: validRepo } = validateRepoName(`${owner}/${repo}`)
 
     try {
         const { data } = await withRetry(
-            () => octokit.repos.getContent({
-                owner: validOwner,
-                repo: validRepo,
-                path: 'README.md',
-            }),
+            () => octokit.repos.getReadme({ owner: validOwner, repo: validRepo }),
             { maxRetries: 2 }
         )
 
-        if ('content' in data && 'sha' in data) {
-            const content = Buffer.from(data.content, 'base64').toString('utf-8')
-            return { content, sha: data.sha }
+        if (!data || typeof data.path !== 'string' || typeof data.sha !== 'string') {
+            console.warn(`[WARN] Unexpected README payload for ${validOwner}/${validRepo}`)
+            return null
         }
 
-        // It's a directory or symlink, not a file
-        console.warn(`[WARN] README.md in ${validOwner}/${validRepo} is not a file`)
-        return null
+        // The contents API omits the body for files over 1 MB (it returns an
+        // empty string, which used to flow downstream and blow up in the
+        // whitespace toggle). Fall back to the blob API for those.
+        let content = data.content ? Buffer.from(data.content, 'base64').toString('utf-8') : ''
+
+        if (!content) {
+            content = await getBlobContent(octokit, validOwner, validRepo, data.sha)
+        }
+
+        if (!content) {
+            console.warn(`[WARN] README in ${validOwner}/${validRepo} is empty or unreadable`)
+            return null
+        }
+
+        return { content, sha: data.sha, path: data.path }
     } catch (error) {
-        // Handle 404 specifically - README doesn't exist
+        // No README at all - a legitimate "skip", not an error.
         if (error instanceof GitHubError && error.code === 'GITHUB_002') {
             return null
         }
-
-        // Check for Octokit 404
         if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
             return null
         }
+        if (isEmptyRepositoryError(error)) {
+            throw GitHubError.conflict(
+                'Repository is empty - push at least one commit before enabling automation',
+                { owner: validOwner, repo: validRepo, reason: 'empty repository' }
+            )
+        }
 
-        // Log and rethrow other errors
         logError(error, { owner: validOwner, repo: validRepo, action: 'get README' })
-        handleOctokitError(error, { owner: validOwner, repo: validRepo, resource: 'README.md' })
+        handleOctokitError(error, { owner: validOwner, repo: validRepo, resource: 'README' })
+    }
+}
+
+/** Read a blob by SHA, used for files the contents API refuses to inline. */
+async function getBlobContent(
+    octokit: Octokit,
+    owner: string,
+    repo: string,
+    sha: string
+): Promise<string> {
+    try {
+        const { data } = await withRetry(
+            () => octokit.git.getBlob({ owner, repo, file_sha: sha }),
+            { maxRetries: 1 }
+        )
+        return Buffer.from(data.content, (data.encoding as BufferEncoding) || 'base64').toString('utf-8')
+    } catch (error) {
+        logError(error, { owner, repo, sha, action: 'get README blob' })
+        return ''
     }
 }
 
 /**
- * Toggle whitespace in README (add/remove trailing space on a line)
+ * Produce a version of the README that differs from the input by exactly one
+ * trailing-whitespace flip.
+ *
+ * This used to be able to return the input unchanged: every line that was
+ * empty, fenced, a table row or contained a markdown link was skipped, so a
+ * README made entirely of badges and tables fell through the loop untouched.
+ * GitHub then accepted the "update" without creating a commit, while this app
+ * counted a success - a commit the user could never find. The toggle now always
+ * changes something and the caller asserts that it did.
  */
 export function toggleReadmeWhitespace(content: string): string {
-    if (!content || typeof content !== 'string') {
+    if (typeof content !== 'string' || content.length === 0) {
         throw ValidationError.invalidValue('content', content, 'must be a non-empty string')
     }
 
     const lines = content.split('\n')
+    let insideFence = false
 
-    // Find a suitable line to modify (non-empty, not a code block, not a link)
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i]
 
-        // Skip empty lines, code blocks, links, and headers with special characters
-        if (!line.trim() ||
-            line.startsWith('```') ||
-            line.includes('](') ||
-            line.startsWith('|')) {
+        // Track fenced code blocks so we never touch their contents: trailing
+        // spaces inside a fence are significant in some languages.
+        if (line.trimStart().startsWith('```')) {
+            insideFence = !insideFence
+            continue
+        }
+        if (insideFence) continue
+
+        // Skip lines where trailing whitespace is meaningful or visible:
+        // blank lines, table rows, and lines holding a markdown link or image.
+        if (!line.trim() || line.startsWith('|') || line.includes('](')) {
             continue
         }
 
-        // Toggle trailing whitespace
-        if (line.endsWith('  ')) {
-            // Remove trailing spaces
-            lines[i] = line.trimEnd()
-        } else if (line.trim().length > 0) {
-            // Add trailing spaces (markdown line break)
-            lines[i] = line.trimEnd() + '  '
-        }
-
-        break // Only modify one line
+        lines[i] = line.endsWith('  ') ? line.trimEnd() : line.trimEnd() + '  '
+        return lines.join('\n')
     }
 
-    return lines.join('\n')
+    // Nothing eligible in the body. Flip the file's trailing newline instead,
+    // which is invisible in every renderer and always a real change.
+    return content.endsWith('\n') ? content.replace(/\n+$/, '') : content + '\n'
 }
 
 /**
- * Commit the updated README
- * If author is provided, the commit will be attributed to them (counts for contribution graph)
+ * Commit an updated README.
+ *
+ * `author` is mandatory now. When it was optional and omitted, the commit was
+ * authored by the GitHub App's bot identity, so it appeared in the repository
+ * but never on the user's contribution graph - the exact complaint this app
+ * exists to prevent. Callers must resolve a real identity or skip the run.
  */
 export async function commitReadmeUpdate(
     octokit: Octokit,
@@ -597,7 +757,8 @@ export async function commitReadmeUpdate(
     repo: string,
     newContent: string,
     oldSha: string,
-    author?: { name: string; email: string }
+    author: { name: string; email: string },
+    options: { path?: string; branch?: string; now?: Date } = {}
 ): Promise<string> {
     const { owner: validOwner, repo: validRepo } = validateRepoName(`${owner}/${repo}`)
 
@@ -609,43 +770,36 @@ export async function commitReadmeUpdate(
         throw ValidationError.missingField('oldSha')
     }
 
-    const messages = [
-        'fix: normalize whitespace in README',
-        'chore: format README.md',
-        'style: clean up README formatting',
-        'docs: fix trailing whitespace in README',
-        'fix: remove extra blank lines in README',
-    ]
+    if (!author || !author.name || !author.email) {
+        throw ValidationError.missingField('author')
+    }
 
-    // Pick a varied message based on the day
-    const messageIndex = new Date().getDay() % messages.length
-    const message = messages[messageIndex]
+    const path = options.path || 'README.md'
+    const now = options.now || new Date()
+
+    // Vary the message by day *and* repository, so a user with several repos
+    // does not get the same message everywhere on the same day.
+    const seed = now.getUTCDate() + hashString(`${validOwner}/${validRepo}`)
+    const message = AUTOMATED_COMMIT_MESSAGES[seed % AUTOMATED_COMMIT_MESSAGES.length]
 
     try {
         const { data } = await withRetry(
             () => octokit.repos.createOrUpdateFileContents({
                 owner: validOwner,
                 repo: validRepo,
-                path: 'README.md',
+                path,
                 message,
-                content: Buffer.from(newContent).toString('base64'),
+                content: Buffer.from(newContent, 'utf-8').toString('base64'),
                 sha: oldSha,
-                // If author is provided, attribute the commit to them
-                ...(author && {
-                    author: {
-                        name: author.name,
-                        email: author.email,
-                    },
-                    committer: {
-                        name: author.name,
-                        email: author.email,
-                    },
-                }),
+                ...(options.branch ? { branch: options.branch } : {}),
+                author: { name: author.name, email: author.email },
+                committer: { name: author.name, email: author.email },
             }),
             {
                 maxRetries: 2,
                 shouldRetry: (error) => {
-                    // Don't retry on conflict (SHA mismatch)
+                    // A SHA mismatch means someone else changed the file; retrying
+                    // with the same stale SHA can only fail again.
                     if (error instanceof GitHubError && error.code === 'GITHUB_007') {
                         return false
                     }
@@ -654,16 +808,36 @@ export async function commitReadmeUpdate(
             }
         )
 
-        return data.commit.sha || ''
+        const sha = data.commit?.sha
+        if (!sha) {
+            // GitHub accepted the request without recording a commit. Treat it
+            // as a failure rather than reporting a commit that does not exist.
+            throw GitHubError.apiError(
+                'GitHub accepted the update but did not create a commit',
+                502,
+                { owner: validOwner, repo: validRepo, path }
+            )
+        }
+
+        return sha
     } catch (error) {
-        logError(error, { owner: validOwner, repo: validRepo, action: 'commit README' })
+        logError(error, { owner: validOwner, repo: validRepo, path, action: 'commit README' })
         handleOctokitError(error, {
             owner: validOwner,
             repo: validRepo,
-            action: 'update README.md',
+            action: `update ${path}`,
             oldSha,
         })
     }
+}
+
+/** Small stable string hash, used only to spread commit messages across repos. */
+function hashString(value: string): number {
+    let hash = 0
+    for (let i = 0; i < value.length; i++) {
+        hash = (hash * 31 + value.charCodeAt(i)) | 0
+    }
+    return Math.abs(hash)
 }
 
 /**
