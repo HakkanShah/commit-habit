@@ -75,18 +75,23 @@ export function HeroSequence() {
                 <motion.div
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5, duration: 0.5 }}
-                    className="flex items-center justify-center gap-2 max-w-full px-4"
+                    transition={{ delay: 0.45, duration: 0.5, ease: 'easeOut' }}
+                    className="inline-flex items-center gap-2 sm:gap-2.5 max-w-[calc(100vw-2rem)] rounded-full border border-[#58a6ff]/25 bg-[#58a6ff]/[0.07] px-3 py-1.5 backdrop-blur-sm"
                 >
-                    <span className="relative rounded-full p-[1px] overflow-hidden shrink-0">
-                        <span className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0deg,#ffffff_180deg,transparent_360deg)] motion-safe:animate-[spin_4s_linear_infinite]" />
-                        <span className="relative block px-2 py-[2px] rounded-full bg-[#0d1117]">
-                            <span className="text-[9px] sm:text-[10px] font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] to-[#a371f7] tracking-[0.15em] leading-none uppercase">
-                                Beta
-                            </span>
-                        </span>
+                    {/* Live pulse. Replaces a spinning conic-gradient ring that read
+                        as a lopsided rectangle at small sizes. */}
+                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-[#58a6ff] opacity-75 motion-safe:animate-ping" />
+                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#58a6ff]" />
                     </span>
-                    <span className="text-[11px] sm:text-xs text-[#8b949e] truncate">
+
+                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-r from-[#58a6ff] to-[#a371f7]">
+                        Beta
+                    </span>
+
+                    <span className="h-3 w-px shrink-0 bg-white/10" aria-hidden="true" />
+
+                    <span className="truncate text-[11px] sm:text-xs text-[#8b949e]">
                         Try it out &amp; share your feedback
                     </span>
                 </motion.div>
