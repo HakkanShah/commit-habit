@@ -27,6 +27,7 @@ import {
     runCommitForInstallation,
     resolveCommitAuthor,
     nextEligibleAfterFailure,
+    nextEligibleAfterStructuralSkip,
     getErrorAction,
     type InstallationForCommit,
 } from '@/lib/commit-service'
@@ -271,6 +272,46 @@ describe('runCommitForInstallation', () => {
         expect(commitReadmeUpdate).not.toHaveBeenCalled()
     })
 
+    it('counts a README-less run so the repo is polled less often next time', async () => {
+        vi.mocked(getReadmeContent).mockResolvedValue(null)
+
+        await runCommitForInstallation(makeInstallation({ failureCount: 2 }), { now: NOW })
+
+        expect(prisma.installation.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    failureCount: { increment: 1 },
+                    nextEligibleAt: nextEligibleAfterStructuralSkip(3, NOW),
+                }),
+            })
+        )
+    })
+
+    it('counts an unlinked-identity run the same way', async () => {
+        const installation = makeInstallation({ failureCount: 1 })
+        installation.user.accounts = []
+
+        await runCommitForInstallation(installation, { now: NOW })
+
+        expect(prisma.installation.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({ failureCount: { increment: 1 } }),
+            })
+        )
+    })
+
+    it('resets the counter on an ordinary skip, which is not a problem to back off from', async () => {
+        vi.mocked(hasUserCommitsToday).mockResolvedValue(true)
+
+        await runCommitForInstallation(makeInstallation({ failureCount: 4 }), { now: NOW })
+
+        expect(prisma.installation.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({ failureCount: 0, nextEligibleAt: TOMORROW }),
+            })
+        )
+    })
+
     it('warns that commits in a fork will never show on the graph', async () => {
         vi.mocked(getRepoMeta).mockResolvedValue({
             defaultBranch: 'main',
@@ -412,6 +453,38 @@ describe('nextEligibleAfterFailure', () => {
 
     it('waits for tomorrow on a permanent failure instead of hammering the API', () => {
         expect(nextEligibleAfterFailure(1, false, NOW).toISOString()).toBe(TOMORROW.toISOString())
+    })
+})
+
+describe('nextEligibleAfterStructuralSkip', () => {
+    // A README-less repository is still README-less tomorrow. In production, 9 of
+    // 11 skips in one run were the same account's empty repositories being
+    // re-checked daily, crowding out users who could actually be served.
+    const day = 24 * 60 * 60 * 1000
+
+    it('still re-checks the next day on the first miss, so a new README is picked up quickly', () => {
+        expect(nextEligibleAfterStructuralSkip(1, NOW).toISOString()).toBe(TOMORROW.toISOString())
+    })
+
+    it('widens the gap as a repository keeps coming up empty', () => {
+        const second = nextEligibleAfterStructuralSkip(2, NOW).getTime()
+        const third = nextEligibleAfterStructuralSkip(3, NOW).getTime()
+        expect(second).toBe(TOMORROW.getTime() + 1 * day)
+        expect(third).toBe(TOMORROW.getTime() + 3 * day)
+    })
+
+    it('caps the gap at a week so nothing is abandoned forever', () => {
+        for (const n of [6, 10, 50]) {
+            expect(nextEligibleAfterStructuralSkip(n, NOW).getTime())
+                .toBe(TOMORROW.getTime() + 6 * day)
+        }
+    })
+
+    it('always lands on a UTC midnight boundary', () => {
+        for (const n of [1, 2, 3, 9]) {
+            const d = nextEligibleAfterStructuralSkip(n, NOW)
+            expect(d.toISOString().endsWith('T00:00:00.000Z')).toBe(true)
+        }
     })
 })
 

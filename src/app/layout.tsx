@@ -128,7 +128,7 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <head>
         {/* Preload LCP image */}
-        <link rel="preload" href="/logo.png" as="image" type="image/png" />
+        <link rel="preload" href="/logo.webp" as="image" type="image/webp" fetchPriority="high" />
 
         {/* DNS Prefetch & Preconnect for external resources */}
         <link rel="dns-prefetch" href="https://github.com" />
@@ -140,11 +140,24 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
       >
+        {/*
+          Analytics runs on `lazyOnload` rather than `afterInteractive`.
+
+          gtag.js is ~90KB of third-party JavaScript that parses and executes on
+          the main thread. On `afterInteractive` that work lands right after
+          hydration, competing with the hero animation for the main thread on
+          exactly the devices that can least afford it. `lazyOnload` waits for the
+          window load event instead.
+
+          Trade-off: a visitor who leaves within the first second or two may not
+          be counted. Change both strategies back to "afterInteractive" if that
+          accuracy matters more than the mobile main-thread time.
+        */}
         <Script
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           src="https://www.googletagmanager.com/gtag/js?id=G-MWC3K30RK2"
         />
-        <Script id="google-analytics" strategy="afterInteractive">
+        <Script id="google-analytics" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
