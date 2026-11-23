@@ -103,11 +103,30 @@ export function HeroSequence() {
                     transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
                     className="flex items-center justify-center transform-gpu"
                 >
-                    <h1 className="text-[2.5rem] sm:text-7xl lg:text-8xl font-black tracking-wide text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 flex items-center justify-center whitespace-nowrap">
+                    {/*
+                      The heading carries the real words; the wordmark beside it is
+                      decoration.
+
+                      Previously the <h1> contained `C`, an <img alt="o">, `mmit`
+                      and `Habit` as separate nodes, so its text content was
+                      "CmmitHabit" and a screen reader announced it letter by
+                      letter. Splitting the two means crawlers and assistive tech
+                      get the product name exactly once, cleanly, while the
+                      logo-as-O visual is untouched.
+                    */}
+                    <h1 className="contents">
+                        <span className="sr-only">
+                            CommitHabit — Protect Your GitHub Streak Automatically
+                        </span>
+                    </h1>
+                    <span
+                        aria-hidden="true"
+                        className="text-[2.5rem] sm:text-7xl lg:text-8xl font-black tracking-wide text-center bg-clip-text text-transparent bg-gradient-to-b from-white to-white/70 flex items-center justify-center whitespace-nowrap"
+                    >
                         <span>C</span>
                         <motion.img
                             src="/logo.webp"
-                            alt="o"
+                            alt=""
                             width={80}
                             height={80}
                             fetchPriority="high"
@@ -122,7 +141,7 @@ export function HeroSequence() {
                         <span>mmit</span>
                         <span className="w-[0.2em] sm:w-[0.3em] inline-block"></span>
                         <span className="text-[#39d353] drop-shadow-[0_0_30px_rgba(57,211,83,0.3)]">Habit</span>
-                    </h1>
+                    </span>
                 </motion.div>
 
                 {/* Contribution Demo */}
