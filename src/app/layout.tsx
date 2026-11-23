@@ -33,10 +33,17 @@ export const metadata: Metadata = {
   alternates: {
     canonical: '/',
   },
-  // The previous version shipped literal strings like
-  // "google-site-verification-placeholder" as real meta tags. A bogus
-  // verification token is worse than none: it occupies the tag the real one
-  // needs. Add them back only with genuine values from each console.
+  // Search Console ownership proof. This value is public by design — it is
+  // served in the HTML to every visitor — so it belongs in the source rather
+  // than in an environment variable.
+  //
+  // Only Google is listed. The previous version shipped literal strings like
+  // "yandex-verification-placeholder" as real meta tags; a bogus token is worse
+  // than none, because it occupies the tag the real one needs. Add Bing or
+  // Yandex here only with genuine values from those consoles.
+  verification: {
+    google: 'BR0JwZ4fkQJshawYt4rmfRm-S4arjY0MPQYCH8ajJlk',
+  },
   robots: {
     index: true,
     follow: true,
