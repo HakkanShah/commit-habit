@@ -30,6 +30,9 @@ import {
     hasUserCommitsToday,
     toggleReadmeWhitespace,
     commitReadmeUpdate,
+    createReadmeFile,
+    buildInitialReadme,
+    isEmptyRepositoryConflict,
     startOfNextUtcDay,
     utcDayKey,
 } from './github'
@@ -63,6 +66,7 @@ export type CommitOutcome =
 export type ActivityAction =
     | 'commit_created'
     | 'manual_commit'
+    | 'readme_created'
     | 'skipped_daily_limit'
     | 'skipped_has_commits'
     | 'skipped_no_readme'
@@ -423,8 +427,21 @@ export async function runCommitForInstallation(
         }
 
         // --- Has the user already done real work today?
+        //
+        // A repository with no commits at all answers 409 to this. That used to
+        // surface as a plain error and the repository was never usable. It is
+        // really just the strongest form of "no README": there is nothing to
+        // commit against yet, so fall through and create one.
+        let repoIsEmpty = false
+
         if (!options.ignoreExistingCommits) {
-            const hasRealCommits = await hasUserCommitsToday(octokit, owner, repoName, author.login, now)
+            let hasRealCommits = false
+            try {
+                hasRealCommits = await hasUserCommitsToday(octokit, owner, repoName, author.login, now)
+            } catch (error) {
+                if (!isEmptyRepositoryConflict(error)) throw error
+                repoIsEmpty = true
+            }
 
             if (hasRealCommits) {
                 await logActivity(
@@ -445,30 +462,89 @@ export async function runCommitForInstallation(
         }
 
         // --- README
-        const readme = await getReadmeContent(octokit, owner, repoName)
+        // Asking an empty repository for its README is another guaranteed 409.
+        // The check above only runs for scheduled runs, so the manual "commit
+        // now" button reaches this call with repoIsEmpty still false - catch it
+        // here too, otherwise the button would error on exactly the repositories
+        // the scheduler is able to bootstrap.
+        let readme: Awaited<ReturnType<typeof getReadmeContent>> = null
+
+        if (!repoIsEmpty) {
+            try {
+                readme = await getReadmeContent(octokit, owner, repoName)
+            } catch (error) {
+                if (!isEmptyRepositoryConflict(error)) throw error
+                repoIsEmpty = true
+            }
+        }
 
         if (!readme) {
+            // No README means nothing to touch, and a repository in that state
+            // stays in that state - it used to be skipped every run forever. Give
+            // it one, which both unblocks the automation and is the commit for
+            // today.
+            //
+            // Not in a fork: GitHub never counts commits in a fork towards the
+            // contribution graph, so creating a file there would do nothing for
+            // the user while leaving an unexpected diff against upstream.
+            if (meta.isFork) {
+                await logActivity(
+                    installation.id,
+                    'skipped_no_readme',
+                    'No README, and this is a fork - commits in forks never reach your contribution graph, so no README was created. Pick a non-forked repository.',
+                    { dedupePerDay: true, now }
+                )
+                await markHandled(
+                    installation.id,
+                    nextEligibleAfterStructuralSkip(installation.failureCount + 1, now),
+                    {
+                        defaultBranch: meta.defaultBranch,
+                        isFork: meta.isFork,
+                        isPrivate: meta.isPrivate,
+                        countUnproductive: true,
+                    }
+                )
+                return {
+                    status: 'skipped',
+                    repo,
+                    reason: 'no_readme',
+                    message: 'No README (fork - not created)',
+                    warnings,
+                }
+            }
+
+            const createdSha = await createReadmeFile(
+                octokit,
+                owner,
+                repoName,
+                buildInitialReadme(repoName),
+                author,
+                { branch: meta.defaultBranch }
+            )
+
+            await recordCommit(installation.id, {
+                sha: createdSha,
+                dayKey,
+                commitsToday,
+                now,
+                readmePath: 'README.md',
+                meta,
+            })
+
             await logActivity(
                 installation.id,
-                'skipped_no_readme',
-                'No README found in this repository. Add a README so there is a file to touch.',
-                { dedupePerDay: true, now }
+                'readme_created',
+                repoIsEmpty
+                    ? `Created README.md (commit ${createdSha.substring(0, 7)}) - this repository was empty`
+                    : `Created README.md (commit ${createdSha.substring(0, 7)}) - this repository had none`,
+                { now }
             )
-            await markHandled(
-                installation.id,
-                nextEligibleAfterStructuralSkip(installation.failureCount + 1, now),
-                {
-                    defaultBranch: meta.defaultBranch,
-                    isFork: meta.isFork,
-                    isPrivate: meta.isPrivate,
-                    countUnproductive: true,
-                }
-            )
+
             return {
-                status: 'skipped',
+                status: 'committed',
                 repo,
-                reason: 'no_readme',
-                message: 'No README found',
+                sha: createdSha,
+                message: `Created README.md and committed ${createdSha.substring(0, 7)}`,
                 warnings,
             }
         }
@@ -498,21 +574,13 @@ export async function runCommitForInstallation(
         )
 
         // --- Persist success
-        await prisma.installation.update({
-            where: { id: installation.id },
-            data: {
-                commitsToday: commitsToday + 1,
-                commitDayUtc: dayKey,
-                lastRunAt: now,
-                lastCommitAt: now,
-                nextEligibleAt: startOfNextUtcDay(now),
-                failureCount: 0,
-                lastError: null,
-                readmePath: readme.path,
-                defaultBranch: meta.defaultBranch,
-                isFork: meta.isFork,
-                isPrivate: meta.isPrivate,
-            },
+        await recordCommit(installation.id, {
+            sha,
+            dayKey,
+            commitsToday,
+            now,
+            readmePath: readme.path,
+            meta,
         })
 
         await logActivity(
@@ -532,6 +600,45 @@ export async function runCommitForInstallation(
     } catch (error) {
         return handleFailure(installation, error, now, warnings)
     }
+}
+
+/**
+ * Persist a successful commit.
+ *
+ * Shared by the ordinary "touch the README" path and the "this repository had
+ * no README, so one was created" path, because both are a commit for the day
+ * and must move the same five pieces of state together: the counter, the day it
+ * belongs to, the commit timestamps, the next eligibility watermark, and the
+ * cached repository facts. Keeping them in one place is what stops the two
+ * paths drifting apart the way the three commit routes did before.
+ */
+async function recordCommit(
+    installationId: string,
+    args: {
+        sha: string
+        dayKey: string
+        commitsToday: number
+        now: Date
+        readmePath: string
+        meta: { defaultBranch: string; isFork: boolean; isPrivate: boolean }
+    }
+): Promise<void> {
+    await prisma.installation.update({
+        where: { id: installationId },
+        data: {
+            commitsToday: args.commitsToday + 1,
+            commitDayUtc: args.dayKey,
+            lastRunAt: args.now,
+            lastCommitAt: args.now,
+            nextEligibleAt: startOfNextUtcDay(args.now),
+            failureCount: 0,
+            lastError: null,
+            readmePath: args.readmePath,
+            defaultBranch: args.meta.defaultBranch,
+            isFork: args.meta.isFork,
+            isPrivate: args.meta.isPrivate,
+        },
+    })
 }
 
 /**

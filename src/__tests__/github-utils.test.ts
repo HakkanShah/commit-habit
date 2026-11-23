@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+    buildInitialReadme,
     toggleReadmeWhitespace,
     isAutomatedCommitMessage,
     startOfUtcDay,
@@ -107,5 +108,39 @@ describe('UTC day helpers', () => {
 
     it('utcDayKey formats the day as YYYY-MM-DD', () => {
         expect(utcDayKey(new Date('2026-03-14T23:45:10.500Z'))).toBe('2026-03-14')
+    })
+})
+
+describe('buildInitialReadme', () => {
+    it('titles the README after the repository', () => {
+        expect(buildInitialReadme('my-project')).toMatch(/^# my-project\n/)
+    })
+
+    it('falls back to a generic title for a blank name', () => {
+        expect(buildInitialReadme('   ')).toMatch(/^# Project\n/)
+    })
+
+    it('says where the file came from, so it is not an unexplained new file', () => {
+        expect(buildInitialReadme('demo')).toMatch(/Commit Habit/)
+    })
+
+    // The whole point of creating this file is to have something to touch
+    // tomorrow. If every line of it were one the toggle skips - a link, a table
+    // row, a fenced block - the next run would produce no change, GitHub would
+    // record no commit, and the repository would be right back where it started.
+    it('produces content the whitespace toggle can actually change', () => {
+        const readme = buildInitialReadme('demo')
+        expect(toggleReadmeWhitespace(readme)).not.toBe(readme)
+    })
+
+    it('keeps toggling cleanly on later runs rather than drifting', () => {
+        const readme = buildInitialReadme('demo')
+        const once = toggleReadmeWhitespace(readme)
+        expect(toggleReadmeWhitespace(once)).toBe(readme)
+    })
+
+    it('changes the heading line, not the explanatory comment', () => {
+        const toggled = toggleReadmeWhitespace(buildInitialReadme('demo'))
+        expect(toggled).toMatch(/^# demo {2}\n/)
     })
 })
