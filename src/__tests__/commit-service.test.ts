@@ -20,6 +20,7 @@ vi.mock('@/lib/github', async () => {
             path: 'README.md',
         })),
         commitReadmeUpdate: vi.fn(async () => 'abcdef1234567890'),
+        createReadmeFile: vi.fn(async () => 'newreadme0000000'),
     }
 })
 
@@ -36,6 +37,8 @@ import {
     hasUserCommitsToday,
     getReadmeContent,
     commitReadmeUpdate,
+    createReadmeFile,
+    buildInitialReadme,
 } from '@/lib/github'
 import { GitHubError } from '@/lib/errors'
 import { MAX_COMMITS_PER_DAY } from '@/lib/limits'
@@ -90,6 +93,7 @@ beforeEach(() => {
         path: 'README.md',
     })
     vi.mocked(commitReadmeUpdate).mockResolvedValue('abcdef1234567890')
+    vi.mocked(createReadmeFile).mockResolvedValue('newreadme0000000')
 })
 
 describe('resolveCommitAuthor', () => {
@@ -263,17 +267,71 @@ describe('runCommitForInstallation', () => {
         expect(outcome).toMatchObject({ status: 'skipped', reason: 'daily_limit' })
     })
 
-    it('skips cleanly when the repository has no README', async () => {
+    it('creates a README when the repository has none, and counts it as the commit', async () => {
         vi.mocked(getReadmeContent).mockResolvedValue(null)
 
         const outcome = await runCommitForInstallation(makeInstallation(), { now: NOW })
 
-        expect(outcome).toMatchObject({ status: 'skipped', reason: 'no_readme' })
+        expect(outcome).toMatchObject({ status: 'committed', sha: 'newreadme0000000' })
+        expect(createReadmeFile).toHaveBeenCalledTimes(1)
+        // Never an update: there is no file to update, and passing a sha for a
+        // non-existent path is rejected by GitHub.
         expect(commitReadmeUpdate).not.toHaveBeenCalled()
+
+        // It is a real commit for the day, so the counter and watermark move.
+        expect(prisma.installation.update).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    commitsToday: 1,
+                    commitDayUtc: TODAY,
+                    nextEligibleAt: TOMORROW,
+                    failureCount: 0,
+                    readmePath: 'README.md',
+                }),
+            })
+        )
     })
 
-    it('counts a README-less run so the repo is polled less often next time', async () => {
+    it('attributes the created README to the user, not the app bot', async () => {
         vi.mocked(getReadmeContent).mockResolvedValue(null)
+
+        await runCommitForInstallation(makeInstallation(), { now: NOW })
+
+        expect(vi.mocked(createReadmeFile).mock.calls[0][4]).toEqual({
+            name: 'Octo Cat',
+            email: '583231+octocat@users.noreply.github.com',
+            login: 'octocat',
+        })
+    })
+
+    it('writes the new README on the default branch', async () => {
+        vi.mocked(getReadmeContent).mockResolvedValue(null)
+        vi.mocked(getRepoMeta).mockResolvedValue({
+            defaultBranch: 'trunk', isFork: false, isPrivate: false, fullName: 'octocat/demo',
+        })
+
+        await runCommitForInstallation(makeInstallation(), { now: NOW })
+
+        expect(vi.mocked(createReadmeFile).mock.calls[0][5]).toMatchObject({ branch: 'trunk' })
+    })
+
+    it('does NOT create a README in a fork, where commits can never count', async () => {
+        vi.mocked(getReadmeContent).mockResolvedValue(null)
+        vi.mocked(getRepoMeta).mockResolvedValue({
+            defaultBranch: 'main', isFork: true, isPrivate: false, fullName: 'octocat/demo',
+        })
+
+        const outcome = await runCommitForInstallation(makeInstallation(), { now: NOW })
+
+        expect(outcome).toMatchObject({ status: 'skipped', reason: 'no_readme' })
+        expect(createReadmeFile).not.toHaveBeenCalled()
+    })
+
+    it('backs off a fork that has no README instead of retrying it daily', async () => {
+        vi.mocked(getReadmeContent).mockResolvedValue(null)
+        vi.mocked(getRepoMeta).mockResolvedValue({
+            defaultBranch: 'main', isFork: true, isPrivate: false, fullName: 'octocat/demo',
+        })
 
         await runCommitForInstallation(makeInstallation({ failureCount: 2 }), { now: NOW })
 
@@ -285,6 +343,49 @@ describe('runCommitForInstallation', () => {
                 }),
             })
         )
+    })
+
+    it('bootstraps a completely empty repository instead of erroring on it', async () => {
+        // listCommits answers 409 for a repository with no commits. That used to
+        // surface as a hard error and the repository was never usable.
+        vi.mocked(hasUserCommitsToday).mockRejectedValue(
+            GitHubError.conflict('Repository is empty', { reason: 'empty repository' })
+        )
+
+        const outcome = await runCommitForInstallation(makeInstallation(), { now: NOW })
+
+        expect(outcome).toMatchObject({ status: 'committed', sha: 'newreadme0000000' })
+        expect(createReadmeFile).toHaveBeenCalledTimes(1)
+        // No point asking an empty repository for a README it cannot have.
+        expect(getReadmeContent).not.toHaveBeenCalled()
+    })
+
+    it('bootstraps an empty repository from the manual button too', async () => {
+        // The manual path skips the commit check, so it meets the 409 at the
+        // README fetch instead. Both routes must behave the same.
+        vi.mocked(getReadmeContent).mockRejectedValue(
+            GitHubError.conflict('Repository is empty', { reason: 'empty repository' })
+        )
+
+        const outcome = await runCommitForInstallation(makeInstallation(), {
+            now: NOW,
+            ignoreExistingCommits: true,
+            successAction: 'manual_commit',
+        })
+
+        expect(outcome).toMatchObject({ status: 'committed', sha: 'newreadme0000000' })
+        expect(createReadmeFile).toHaveBeenCalledTimes(1)
+    })
+
+    it('still reports other conflicts as failures', async () => {
+        vi.mocked(hasUserCommitsToday).mockRejectedValue(
+            GitHubError.conflict('SHA mismatch', { reason: 'stale sha' })
+        )
+
+        const outcome = await runCommitForInstallation(makeInstallation(), { now: NOW })
+
+        expect(outcome).toMatchObject({ status: 'failed', errorCode: 'GITHUB_007' })
+        expect(createReadmeFile).not.toHaveBeenCalled()
     })
 
     it('counts an unlinked-identity run the same way', async () => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Pause, Play, Loader2, GitCommit, Trash2, MoreVertical, X, ExternalLink, Clock, Zap, ChevronDown, CheckCircle, XCircle, SkipForward, History, AlertTriangle } from 'lucide-react'
+import { Pause, Play, Loader2, GitCommit, Trash2, MoreVertical, X, ExternalLink, Clock, Zap, ChevronDown, CheckCircle, XCircle, SkipForward, History, AlertTriangle, FilePlus } from 'lucide-react'
 import { useToast } from '@/components/toast'
 import { MAX_COMMITS_PER_DAY } from '@/lib/limits'
 
@@ -71,33 +71,69 @@ export function InstallationCard({ installation, isLoading = false, isCommitting
         return `${diffDays}d ago`
     }
 
-    // Get icon for activity type
+    /**
+     * How each activity-log action is presented.
+     *
+     * The old version only knew three actions and fell through to
+     * `return action`, so the dashboard showed users raw strings like
+     * `skipped_no_identity` and `error_permission`. Every action the engine can
+     * write now has a label a person can read and a colour that matches what it
+     * means: green for "a commit happened", blue for "nothing needed doing",
+     * amber for "needs your attention", red for "broken".
+     */
+    const ACTIVITY: Record<string, { label: string; tone: 'good' | 'info' | 'warn' | 'bad' }> = {
+        commit_created: { label: 'Commit', tone: 'good' },
+        manual_commit: { label: 'Manual commit', tone: 'good' },
+        readme_created: { label: 'README added', tone: 'good' },
+
+        skipped_has_commits: { label: 'You already committed', tone: 'info' },
+        skipped_daily_limit: { label: 'Daily limit', tone: 'info' },
+        resumed: { label: 'Resumed', tone: 'info' },
+        paused: { label: 'Paused', tone: 'info' },
+
+        skipped_no_readme: { label: 'No README', tone: 'warn' },
+        skipped_no_identity: { label: 'GitHub not linked', tone: 'warn' },
+        warning_fork: { label: 'Fork — will not count', tone: 'warn' },
+        warning_private: { label: 'Private — check settings', tone: 'warn' },
+        error_rate_limited: { label: 'Rate limited', tone: 'warn' },
+        error_network: { label: 'Network issue', tone: 'warn' },
+        error_conflict: { label: 'Conflict', tone: 'warn' },
+
+        error_permission: { label: 'Access lost', tone: 'bad' },
+        error_not_found: { label: 'Repo not found', tone: 'bad' },
+        error_unknown: { label: 'Error', tone: 'bad' },
+        error: { label: 'Error', tone: 'bad' },
+    }
+
+    const TONE_CLASS: Record<string, string> = {
+        good: 'bg-[#39d353]/10 text-[#39d353]',
+        info: 'bg-[#58a6ff]/10 text-[#58a6ff]',
+        warn: 'bg-[#d29922]/10 text-[#d29922]',
+        bad: 'bg-[#f85149]/10 text-[#f85149]',
+    }
+
+    const activityMeta = (action: string) =>
+        ACTIVITY[action] ?? { label: action.replace(/_/g, ' '), tone: 'info' as const }
+
     const getActivityIcon = (action: string) => {
-        switch (action) {
-            case 'commit_created':
+        const { tone } = activityMeta(action)
+        if (action === 'readme_created') return <FilePlus size={14} className="text-[#39d353]" />
+        switch (tone) {
+            case 'good':
                 return <CheckCircle size={14} className="text-[#39d353]" />
-            case 'skipped_has_commits':
+            case 'info':
                 return <SkipForward size={14} className="text-[#58a6ff]" />
-            case 'error':
+            case 'warn':
+                return <AlertTriangle size={14} className="text-[#d29922]" />
+            case 'bad':
                 return <XCircle size={14} className="text-[#f85149]" />
             default:
                 return <GitCommit size={14} className="text-[#8b949e]" />
         }
     }
 
-    // Get label for activity type
-    const getActivityLabel = (action: string) => {
-        switch (action) {
-            case 'commit_created':
-                return 'Commit'
-            case 'skipped_has_commits':
-                return 'Skipped'
-            case 'error':
-                return 'Error'
-            default:
-                return action
-        }
-    }
+    const getActivityLabel = (action: string) => activityMeta(action).label
+
 
     return (
         <>
@@ -338,12 +374,7 @@ export function InstallationCard({ installation, isLoading = false, isCommitting
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${log.action === 'commit_created'
-                                                ? 'bg-[#39d353]/10 text-[#39d353]'
-                                                : log.action === 'error'
-                                                    ? 'bg-[#f85149]/10 text-[#f85149]'
-                                                    : 'bg-[#58a6ff]/10 text-[#58a6ff]'
-                                                }`}>
+                                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${TONE_CLASS[activityMeta(log.action).tone]}`}>
                                                 {getActivityLabel(log.action)}
                                             </span>
                                             <span className="text-xs text-[#8b949e]">

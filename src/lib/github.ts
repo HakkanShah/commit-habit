@@ -568,6 +568,18 @@ export async function hasUserCommitsToday(
     }
 }
 
+/**
+ * True for the wrapped error this module raises when a repository has no commits.
+ *
+ * Separate from `isEmptyRepositoryError`, which inspects the raw Octokit error:
+ * by the time the engine sees it, it has been converted to a `GitHubError`.
+ */
+export function isEmptyRepositoryConflict(error: unknown): boolean {
+    return error instanceof GitHubError &&
+        error.code === 'GITHUB_007' &&
+        error.context?.reason === 'empty repository'
+}
+
 /** GitHub answers 409 Conflict for git operations against a repository with no commits. */
 export function isEmptyRepositoryError(error: unknown): boolean {
     if (!error || typeof error !== 'object') return false
@@ -741,6 +753,119 @@ export function toggleReadmeWhitespace(content: string): string {
     // Nothing eligible in the body. Flip the file's trailing newline instead,
     // which is invisible in every renderer and always a real change.
     return content.endsWith('\n') ? content.replace(/\n+$/, '') : content + '\n'
+}
+
+/**
+ * The README written into a repository that has none.
+ *
+ * Two constraints shape this content:
+ *
+ *  - It has to be a *useful* starting point, not filler. This file lands in
+ *    someone's public repository under their own name, so it should look like
+ *    something they would plausibly have written and want to keep.
+ *  - The first non-empty line must survive `toggleReadmeWhitespace`, which skips
+ *    blank lines, fenced blocks, table rows and lines containing a markdown
+ *    link. The `# Heading` below is deliberately plain so later runs always have
+ *    something to toggle.
+ */
+export function buildInitialReadme(repoName: string): string {
+    const title = repoName.trim() || 'Project'
+
+    return `# ${title}
+
+A short description of what this project does.
+
+## Getting started
+
+Describe how to install and run it here.
+
+## Usage
+
+Add examples once there is something to show.
+
+<!--
+This README was created automatically by Commit Habit because the repository
+did not have one, so there is a file to keep up to date. It will not be
+recreated or overwritten - edit or replace it however you like.
+-->
+`
+}
+
+/**
+ * Create a file that does not exist yet.
+ *
+ * This is the same contents endpoint `commitReadmeUpdate` uses, with the `sha`
+ * omitted - that omission is precisely what makes GitHub treat the request as a
+ * creation. Passing a `sha` for a path that does not exist fails, and omitting
+ * one for a path that *does* exist fails too, so creation and update cannot be
+ * collapsed into a single call without knowing which case applies.
+ */
+export async function createReadmeFile(
+    octokit: Octokit,
+    owner: string,
+    repo: string,
+    content: string,
+    author: { name: string; email: string },
+    options: { path?: string; branch?: string } = {}
+): Promise<string> {
+    const { owner: validOwner, repo: validRepo } = validateRepoName(`${owner}/${repo}`)
+
+    if (!content || typeof content !== 'string') {
+        throw ValidationError.invalidValue('content', content, 'must be a non-empty string')
+    }
+
+    if (!author || !author.name || !author.email) {
+        throw ValidationError.missingField('author')
+    }
+
+    const path = options.path || 'README.md'
+
+    try {
+        const { data } = await withRetry(
+            () => octokit.repos.createOrUpdateFileContents({
+                owner: validOwner,
+                repo: validRepo,
+                path,
+                message: 'docs: add README',
+                content: Buffer.from(content, 'utf-8').toString('base64'),
+                // No `sha`: this is a creation.
+                ...(options.branch ? { branch: options.branch } : {}),
+                author: { name: author.name, email: author.email },
+                committer: { name: author.name, email: author.email },
+            }),
+            {
+                maxRetries: 2,
+                shouldRetry: (error) => {
+                    // 422 here means the path already exists - something created it
+                    // between our check and this write. Retrying cannot help.
+                    if (error && typeof error === 'object' && 'status' in error &&
+                        (error as { status?: number }).status === 422) {
+                        return false
+                    }
+                    return isRetryableError(error)
+                },
+            }
+        )
+
+        const sha = data.commit?.sha
+        if (!sha) {
+            throw GitHubError.apiError(
+                'GitHub accepted the new README but did not record a commit',
+                502,
+                { owner: validOwner, repo: validRepo, path }
+            )
+        }
+
+        return sha
+    } catch (error) {
+        logError(error, { owner: validOwner, repo: validRepo, path, action: 'create README' })
+        handleOctokitError(error, {
+            owner: validOwner,
+            repo: validRepo,
+            action: `create ${path}`,
+            resource: path,
+        })
+    }
 }
 
 /**
