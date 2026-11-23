@@ -358,6 +358,24 @@ html::-webkit-scrollbar {
   contain-intrinsic-size: auto 500px;
 }
 
+/*
+ * Row-sized containment for long list items.
+ *
+ * `.content-auto` above reserves 500px, which suits a whole page section but is
+ * wrong for a list row: the browser would reserve 500px per off-screen row and
+ * the scrollbar would be wildly out of proportion. This variant reserves a row,
+ * so off-screen rows skip layout and paint while the scroll height stays close
+ * to correct.
+ *
+ * Containment, not virtualisation, on purpose: every row stays in the DOM, so
+ * "select all", search filtering, Ctrl+F and selection state keep working
+ * exactly as before.
+ */
+.list-row-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 64px;
+}
+
 /* Optimize paint for fixed/animated elements */
 .optimize-paint {
   contain: layout style paint;
