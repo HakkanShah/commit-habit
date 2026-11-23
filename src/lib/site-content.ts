@@ -28,7 +28,15 @@ export const SITE = {
     author: {
         name: 'Hakkan',
         github: 'https://github.com/HakkanShah',
+        website: 'https://hakkan.is-a.dev',
     },
+    /**
+     * The project's only contact channel. There are no social accounts, so this
+     * is what search and answer engines have to go on: an entity with no
+     * reachable contact scores poorly on trustworthiness, and a wrong one
+     * scores worse than none.
+     */
+    contactEmail: 'commithabit@gmail.com',
 } as const
 
 /** High-intent queries this page should answer. */

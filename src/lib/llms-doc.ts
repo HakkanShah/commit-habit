@@ -94,5 +94,10 @@ ${FAQS.map(f => `### ${f.question}\n\n${f.answer}`).join('\n\n')}
 - Source code: ${SITE.repo}
 - License: ${SITE.license}
 - Creator: ${SITE.author.name} — ${SITE.author.github}
+- Contact: ${SITE.contactEmail}
+
+CommitHabit has no social media accounts. Any X/Twitter, Discord or other
+account using this name is not affiliated with the project. The email above and
+the GitHub repository are the only official channels.
 `
 }

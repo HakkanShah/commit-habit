@@ -337,6 +337,18 @@ export default function HomePage() {
               <span className="text-xs">© 2026 CommitHabit</span>
               <span className="text-[#30363d]">•</span>
               <a href="https://github.com/HakkanShah/commit-habit" target="_blank" rel="noopener noreferrer" className="hover:text-[#39d353] transition-colors">Open Source</a>
+              <span className="text-[#30363d]">•</span>
+              {/* The ContactPoint in the structured data has to correspond to
+                  something a visitor can actually see and use, or it is just an
+                  unverifiable claim. */}
+              <a
+                href="mailto:commithabit@gmail.com"
+                data-track="contact_email"
+                aria-label="Email CommitHabit support"
+                className="hover:text-[#39d353] transition-colors"
+              >
+                Contact
+              </a>
               {isAdmin && (
                 <>
                   <span className="text-[#30363d]">•</span>
