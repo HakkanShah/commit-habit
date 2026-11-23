@@ -1,8 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
+import { SITE, SITE_URL, KEYWORDS } from "@/lib/site-content";
+import { StructuredData } from "@/components/structured-data";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,44 +17,26 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://commithabit.vercel.app'),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Commit Habit - Build Your GitHub Activity Streak",
-    template: "%s | Commit Habit"
+    default: `${SITE.name} — ${SITE.tagline}`,
+    template: `%s | ${SITE.name}`,
   },
-  description: "Automate your GitHub contributions safely and ethically. Build consistent coding habits with daily commits using secure GitHub App authentication. No PAT required, open source, and free.",
-  keywords: [
-    "GitHub automation",
-    "daily commits",
-    "contribution streak",
-    "GitHub activity",
-    "coding habit",
-    "commit bot",
-    "GitHub App",
-    "developer tools",
-    "open source",
-    "free GitHub automation"
-  ],
-  authors: [{ name: "Commit Habit", url: "https://commithabit.vercel.app" }],
-  creator: "Commit Habit",
-  publisher: "Commit Habit",
-  applicationName: 'Commit Habit',
+  description: SITE.description,
+  keywords: KEYWORDS,
+  authors: [{ name: SITE.author.name, url: SITE.author.github }],
+  creator: SITE.author.name,
+  publisher: SITE.name,
+  applicationName: SITE.name,
   referrer: 'origin-when-cross-origin',
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
+  formatDetection: { email: false, address: false, telephone: false },
   alternates: {
     canonical: '/',
   },
-  verification: {
-    google: 'google-site-verification-placeholder',
-    yandex: 'yandex-verification-placeholder',
-    other: {
-      'msvalidate.01': 'bing-verification-placeholder',
-    },
-  },
+  // The previous version shipped literal strings like
+  // "google-site-verification-placeholder" as real meta tags. A bogus
+  // verification token is worse than none: it occupies the tag the real one
+  // needs. Add them back only with genuine values from each console.
   robots: {
     index: true,
     follow: true,
@@ -65,27 +49,21 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://commithabit.vercel.app",
-    siteName: "Commit Habit",
-    title: "Commit Habit - Build Your GitHub Activity Streak",
-    description: "Automate your GitHub contributions safely. Build consistent coding habits with daily commits using secure GitHub App authentication.",
-    images: [
-      {
-        url: "/logo.png",
-        width: 1200,
-        height: 630,
-        alt: "Commit Habit Logo",
-      },
-    ],
+    type: 'website',
+    locale: 'en_US',
+    url: SITE_URL,
+    siteName: SITE.name,
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.shortDescription,
+    // Image, dimensions and alt come from `opengraph-image.tsx`. They used to be
+    // declared here by hand as 1200x630 while pointing at a 512x512 logo, so
+    // every social platform cropped or letterboxed a square into a wide card.
   },
   twitter: {
-    card: "summary_large_image",
-    title: "Commit Habit - Build Your GitHub Activity Streak",
-    description: "Automate your GitHub contributions safely. No PAT required, open source, and free.",
-    images: ["/logo.png"],
-    creator: "@commithabit",
+    card: 'summary_large_image',
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.shortDescription,
+    creator: '@commithabit',
   },
   icons: {
     icon: '/icon.png',
@@ -93,31 +71,18 @@ export const metadata: Metadata = {
     apple: '/icon.png',
   },
   manifest: '/manifest.json',
+  category: 'technology',
+}
+
+// `themeColor` belongs on the viewport export, not on metadata — Next.js warns
+// about it on every build when it is in the wrong place.
+export const viewport: Viewport = {
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#0d1117' },
     { media: '(prefers-color-scheme: dark)', color: '#0d1117' },
   ],
-  category: 'technology',
-};
-
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "name": "Commit Habit",
-  "applicationCategory": "DeveloperApplication",
-  "operatingSystem": "Any",
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "USD"
-  },
-  "description": "Automate your GitHub contributions safely and ethically. Build consistent coding habits with daily commits using secure GitHub App authentication.",
-  "publisher": {
-    "@type": "Organization",
-    "name": "Commit Habit",
-    "logo": "https://commithabit.vercel.app/logo.png"
-  }
-};
+  colorScheme: 'dark',
+}
 
 export default function RootLayout({
   children,
@@ -166,7 +131,7 @@ export default function RootLayout({
             gtag('config', 'G-MWC3K30RK2');
           `}
         </Script>
-        <Script id="json-ld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <StructuredData />
         <Providers>{children}</Providers>
       </body>
     </html>

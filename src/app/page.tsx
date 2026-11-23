@@ -5,6 +5,9 @@ import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 import { Github, Terminal, Shield, Zap, ArrowRight, ExternalLink, Sparkles, Settings } from 'lucide-react'
 import { HeroSequence } from '@/components/hero-sequence'
+import { HowItWorks } from '@/components/how-it-works'
+import { ComparisonMatrix } from '@/components/comparison-matrix'
+import { FaqSection } from '@/components/faq-section'
 import { ErrorBanner } from '@/components/error-banner'
 import Link from 'next/link'
 
@@ -77,7 +80,7 @@ export default function HomePage() {
   }, [])
 
   return (
-    <main role="main" aria-label="CommitHabit Landing Page" className="min-h-screen bg-[#0d1117] text-white overflow-x-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
+    <main aria-label="CommitHabit: protect your GitHub streak automatically" className="min-h-screen bg-[#0d1117] text-white overflow-x-hidden selection:bg-[#39d353]/30 selection:text-[#39d353]">
       {/* Global Fixed Background */}
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] animate-grid pointer-events-none z-0" aria-hidden="true" />
       <div className="fixed inset-0 bg-gradient-to-b from-[#0d1117] via-transparent to-[#050505] pointer-events-none z-0" aria-hidden="true" />
@@ -244,8 +247,16 @@ export default function HomePage() {
 
               {/* Main CTA Buttons */}
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center mb-8">
+                {/*
+                  `data-track` marks the conversion points. The attribute is the
+                  whole hook: one delegated listener reads it, so adding or
+                  moving a CTA never means touching analytics wiring, and no
+                  per-button onClick ships to the client.
+                */}
                 <motion.a
                   href="/api/auth/github"
+                  data-track="cta_connect_github"
+                  aria-label="Connect the CommitHabit GitHub App to your account"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="w-full sm:w-auto flex items-center justify-center gap-3 bg-[#238636] hover:bg-[#2ea043] text-white py-4 px-8 rounded-xl font-bold text-lg shadow-[0_0_30px_rgba(57,211,83,0.3)] hover:shadow-[0_0_50px_rgba(57,211,83,0.5)] transition-all"
@@ -259,6 +270,8 @@ export default function HomePage() {
                   href="https://github.com/HakkanShah/commit-habit"
                   target="_blank"
                   rel="noopener noreferrer"
+                  data-track="cta_source_code"
+                  aria-label="View the CommitHabit open source code on GitHub (opens in a new tab)"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="w-full sm:w-auto flex items-center justify-center gap-3 bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] hover:text-white hover:border-[#8b949e] py-4 px-8 rounded-xl font-bold text-lg transition-all"
@@ -274,6 +287,8 @@ export default function HomePage() {
                 href="https://github.com/HakkanShah/commit-habit"
                 target="_blank"
                 rel="noopener noreferrer"
+                data-track="cta_star_repo"
+                aria-label="Star the CommitHabit repository on GitHub (opens in a new tab)"
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-[#161b22] to-[#1c2128] border border-[#30363d] hover:border-[#d29922]/50 rounded-full text-[#c9d1d9] hover:text-white transition-all group"
@@ -291,6 +306,18 @@ export default function HomePage() {
             </motion.div>
           </div>
         </section>
+
+        {/*
+          GEO sections.
+
+          These are plain server components with no client JavaScript: the
+          comparison table and the FAQ are present in the initial HTML, which is
+          what a crawler or an AI fetcher reads. Rendering them behind hydration
+          would hide exactly the content that is meant to be cited.
+        */}
+        <HowItWorks />
+        <ComparisonMatrix />
+        <FaqSection />
 
         {/* Footer */}
         <footer className="py-8 border-t border-[#30363d] bg-[#0d1117] relative z-10">
