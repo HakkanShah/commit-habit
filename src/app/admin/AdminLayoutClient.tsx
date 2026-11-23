@@ -127,10 +127,10 @@ export function AdminLayoutClient({
                 </div>
             </aside>
 
-            {/* Desktop Layout */}
-            <div className="hidden lg:flex">
-                {/* Desktop Sidebar */}
-                <aside className="fixed inset-y-0 left-0 w-64 bg-[#0d1117] border-r border-white/5">
+            {/* Desktop Sidebar. `fixed`, so it needs no flex parent — the
+                wrapper it used to live in existed only to sit beside a second
+                copy of the page content. */}
+            <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-[#0d1117] border-r border-white/5">
                     <div className="flex flex-col h-full">
                         {/* Logo */}
                         <div className="p-6 border-b border-white/5">
@@ -176,23 +176,26 @@ export function AdminLayoutClient({
                             </Link>
                         </div>
                     </div>
-                </aside>
+            </aside>
 
-                {/* Main Content */}
-                <main className="flex-1 ml-64 min-h-screen">
-                    <div className="max-w-5xl mx-auto p-6 lg:p-8">
-                        <ErrorBoundary>
-                            {children}
-                        </ErrorBoundary>
-                    </div>
-                </main>
-            </div>
+            {/*
+              One <main>, responsive.
 
-            {/* Mobile Content */}
-            <main className="lg:hidden px-3 sm:px-4 py-4 sm:py-5 safe-area-bottom">
-                <ErrorBoundary>
-                    {children}
-                </ErrorBoundary>
+              This used to be two: a desktop copy inside the sidebar wrapper and
+              a mobile copy below it, each rendering {children}. That mounted
+              every admin page twice — two component trees, two sets of state,
+              two copies of every list and modal, and two `useSWR` hooks per
+              page. It is why /admin/users carried 10,333 DOM nodes, and why the
+              pager added to it appeared twice.
+
+              It was also an accessibility bug: two <main> landmarks on one page.
+            */}
+            <main className="min-h-screen px-3 py-4 sm:px-4 sm:py-5 lg:ml-64 lg:px-0 lg:py-0 safe-area-bottom">
+                <div className="lg:max-w-5xl lg:mx-auto lg:p-8">
+                    <ErrorBoundary>
+                        {children}
+                    </ErrorBoundary>
+                </div>
             </main>
         </div>
     )

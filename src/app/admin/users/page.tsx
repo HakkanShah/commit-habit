@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useDeferredValue, useMemo } from 'react'
+import { useState, useDeferredValue, useMemo, useEffect } from 'react'
 import useSWR from 'swr'
 import {
     Search, Users, GitBranch, MessageSquare, ChevronRight,
@@ -83,6 +83,32 @@ export default function AdminUsersPage() {
                 return allUsers.filter(u => !u.deletedAt)
         }
     }, [allUsers, activeFilter])
+
+    /**
+     * Render one page of rows at a time.
+     *
+     * The list is rendered twice — a desktop table and a mobile card list, both
+     * always in the DOM and switched with CSS. With 100 users fetched that was
+     * 10,333 DOM nodes and a 551 ms unbroken main-thread task on a throttled
+     * phone, which is what made this page feel frozen on open.
+     *
+     * Slicing the rendered rows is the fix rather than server-side paging,
+     * because the filter tab counts below are computed across the whole fetched
+     * set; paging the fetch would make those counts wrong.
+     */
+    const PAGE_SIZE = 25
+    const [page, setPage] = useState(0)
+
+    const pageCount = Math.max(1, Math.ceil(users.length / PAGE_SIZE))
+    const currentPage = Math.min(page, pageCount - 1)
+    const visibleUsers = useMemo(
+        () => users.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE),
+        [users, currentPage]
+    )
+
+    // Changing tab or search must not leave you stranded on a page that no
+    // longer exists.
+    useEffect(() => { setPage(0) }, [activeFilter, deferredSearch])
 
     // Stats for filter tabs
     const stats = useMemo(() => ({
@@ -240,12 +266,12 @@ export default function AdminUsersPage() {
                         />
                     ) : (
                         <div className="divide-y divide-white/5 stagger-children">
-                            {users.map((user) => (
+                            {visibleUsers.map((user) => (
                                 <div
                                     key={user.id}
                                     onClick={() => setSelectedUserId(user.id)}
                                     className={`
-                                        grid grid-cols-12 gap-4 items-center px-4 py-3 
+                                        list-row-auto grid grid-cols-12 gap-4 items-center px-4 py-3 
                                         cursor-pointer transition-all premium-card
                                         hover:bg-white/[0.03]
                                         ${user.deletedAt ? 'opacity-60' : ''}
@@ -336,12 +362,12 @@ export default function AdminUsersPage() {
                             description={search ? 'Try adjusting your search terms' : 'Users will appear here once they sign up'}
                         />
                     ) : (
-                        users.map((user) => (
+                        visibleUsers.map((user) => (
                             <div
                                 key={user.id}
                                 onClick={() => setSelectedUserId(user.id)}
                                 className={`
-                                    bg-white/[0.02] border rounded-xl p-4 
+                                    list-row-auto bg-white/[0.02] border rounded-xl p-4 
                                     cursor-pointer transition-all premium-card press-effect
                                     active:scale-[0.98]
                                     ${user.deletedAt
@@ -413,6 +439,56 @@ export default function AdminUsersPage() {
             </div>
 
             {/* User Action Panel */}
+            {/*
+              Pager. Rendered once, below both list layouts, so it controls
+              whichever one CSS is currently showing.
+            */}
+            {users.length > PAGE_SIZE && (
+                <nav
+                    aria-label="User list pages"
+                    className="flex items-center justify-between gap-4 px-4 py-4 text-sm"
+                >
+                    <p className="text-gray-400" aria-live="polite">
+                        Showing{' '}
+                        <span className="text-white">
+                            {currentPage * PAGE_SIZE + 1}–
+                            {Math.min((currentPage + 1) * PAGE_SIZE, users.length)}
+                        </span>{' '}
+                        of <span className="text-white">{users.length}</span>
+                        {/* The fetch is capped at 100. Without saying so, the tab
+                            badge reading "100" next to a header reading "141
+                            registered users" looks like a bug, and an admin would
+                            reasonably assume they are seeing everyone. */}
+                        {total > allUsers.length && (
+                            <span className="text-gray-500">
+                                {' '}· first {allUsers.length} of {total} loaded, search to narrow
+                            </span>
+                        )}
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setPage(p => Math.max(0, p - 1))}
+                            disabled={currentPage === 0}
+                            className="rounded-lg border border-white/10 px-3 py-1.5 text-gray-300 transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            Previous
+                        </button>
+                        <span className="text-gray-500">
+                            {currentPage + 1} / {pageCount}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))}
+                            disabled={currentPage >= pageCount - 1}
+                            className="rounded-lg border border-white/10 px-3 py-1.5 text-gray-300 transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </nav>
+            )}
+
             {selectedUserId && (
                 <UserActionPanel
                     userId={selectedUserId}
