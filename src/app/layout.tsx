@@ -37,12 +37,20 @@ export const metadata: Metadata = {
   // served in the HTML to every visitor — so it belongs in the source rather
   // than in an environment variable.
   //
+  // Note this is the token from Search Console's *HTML tag* method. Google
+  // issues a different token per method: the DNS TXT token is not
+  // interchangeable with this one, and DNS verification is not available on a
+  // .vercel.app subdomain anyway, since the DNS for vercel.app is Vercel's.
+  // `public/googlea7ed2a49ca200a60.html` carries the HTML-file method as a
+  // second, independent proof — Google accepts either, and keeping both means
+  // ownership survives one of them being removed by accident.
+  //
   // Only Google is listed. The previous version shipped literal strings like
   // "yandex-verification-placeholder" as real meta tags; a bogus token is worse
   // than none, because it occupies the tag the real one needs. Add Bing or
   // Yandex here only with genuine values from those consoles.
   verification: {
-    google: 'BR0JwZ4fkQJshawYt4rmfRm-S4arjY0MPQYCH8ajJlk',
+    google: '_RqZR5igVN4EnU7Ba6jr3TVlFQiuDPwqhutqyvr1KT0',
   },
   robots: {
     index: true,
