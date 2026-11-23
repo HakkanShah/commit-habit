@@ -75,10 +75,15 @@ export const metadata: Metadata = {
     // every social platform cropped or letterboxed a square into a wide card.
   },
   twitter: {
+    // `summary_large_image` is what makes the wide card render and has nothing
+    // to do with owning an account, so it stays.
+    //
+    // `creator` does not. It was set to "@commithabit", which is not an account
+    // this project owns — every shared link was crediting a stranger, and X
+    // renders that handle as a byline on the card.
     card: 'summary_large_image',
     title: `${SITE.name} — ${SITE.tagline}`,
     description: SITE.shortDescription,
-    creator: '@commithabit',
   },
   icons: {
     icon: '/icon.png',

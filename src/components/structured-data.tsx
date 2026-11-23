@@ -31,7 +31,8 @@ export function StructuredData() {
             '@id': `${SITE_URL}/#person`,
             name: SITE.author.name,
             url: SITE.author.github,
-            sameAs: [SITE.author.github],
+            sameAs: [SITE.author.github, SITE.author.website],
+            email: `mailto:${SITE.contactEmail}`,
             jobTitle: 'Software Developer',
             description:
                 'Developer and creator of CommitHabit, an open-source tool for protecting GitHub contribution streaks without personal access tokens.',
@@ -57,6 +58,18 @@ export function StructuredData() {
             author: { '@id': `${SITE_URL}/#person` },
             creator: { '@id': `${SITE_URL}/#person` },
             maintainer: { '@id': `${SITE_URL}/#person` },
+            // A reachable support channel. There are no social accounts for this
+            // project, so this is the only contact signal available — and an
+            // entity a search or answer engine cannot verify a contact for is
+            // one it has less reason to recommend.
+            provider: { '@id': `${SITE_URL}/#person` },
+            contactPoint: {
+                '@type': 'ContactPoint',
+                contactType: 'customer support',
+                email: SITE.contactEmail,
+                url: SITE_URL,
+                availableLanguage: ['English'],
+            },
             offers: {
                 '@type': 'Offer',
                 price: '0',
